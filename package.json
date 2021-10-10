@@ -1,0 +1,19 @@
+{
+  "name": "demrec",
+  "version": "1.0.0",
+  "description": "Demo Recorder Renderer",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bakapear/demrec.git"
+  },
+  "author": "bakapear",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bakapear/demrec/issues"
+  },
+  "homepage": "https://github.com/bakapear/demrec#readme"
+}
