@@ -1,6 +1,10 @@
 # demrec
 NodeJS wrapper for [SourceDemoRender](https://github.com/crashfort/SourceDemoRender)!
 
+## Setup
+- Get the latest version of [SourceDemoRender](https://github.com/crashfort/SourceDemoRender) (35+)
+- Configure settings in `config.ini`
+
 ## Usage
 ```js
 let DemRec = require('demrec')
