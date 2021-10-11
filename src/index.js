@@ -71,6 +71,8 @@ DemRec.prototype.launch = async function () {
 
 DemRec.prototype.record = async function (obj, output) {
   if (!obj.demo) throw new Error('No demo provided!')
+  if (!fs.existsSync(obj.demo)) throw new Error('Demo path does not exist!')
+
   if (!output) output = ph.basename(obj.demo, 'dem') + 'mp4'
 
   let file = Date.now().toString()
