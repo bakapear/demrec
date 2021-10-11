@@ -72,6 +72,8 @@ DemRec.prototype.launch = async function () {
 DemRec.prototype.record = async function (obj, output) {
   let file = Date.now().toString()
 
+  if (!obj.raw) obj.cmd = ['viewanim_reset; snd_soundmixer "Default_Mix"', obj.cmd].filter(x => x).join('; ')
+
   if (obj.cmd) {
     fs.writeFileSync(ph.join(this.game.tmp, this.game.cmd), obj.cmd)
     obj.cmd = `exec ${ph.join(TOKEN, this.game.cmd)}`
