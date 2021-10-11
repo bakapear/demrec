@@ -42,7 +42,7 @@ DemRec.prototype.setGame = function (app) {
 }
 
 DemRec.prototype.setLaunchOptions = function (opts) {
-  let args = [`+sv_cheats 1 -nomouse +unbindall +con_logfile ${ph.join(this.game.token, this.game.log)}`]
+  let args = [`-nomouse +sv_cheats 1 +unbindall +volume 0 +con_logfile ${ph.join(this.game.token, this.game.log)}`]
 
   let cfgs = this.cfg.General.game_cfgs
   if (cfgs) {
@@ -146,10 +146,10 @@ function createVDM (obj, file) {
   if (obj.tick.end - obj.tick.start < 10) throw new Error('Invalid demo tick range!')
 
   let vdm = new VDM(obj.demo)
-  if (obj.tick.start !== 0) vdm.add(0, `echo [${TOKEN}]-Skipping; demo_gototick ${obj.tick.start}`)
-  vdm.add(obj.tick.start, [obj.cmd, `startmovie ${file} ${TOKEN}`].filter(x => x).join('; '))
+  if (obj.tick.start !== 0) vdm.add(0, `volume 0; echo [${TOKEN}]-Skipping; demo_gototick ${obj.tick.start}`)
+  vdm.add(obj.tick.start, [obj.cmd, `volume 0.5; startmovie ${file} ${TOKEN}`].filter(x => x).join('; '))
   vdm.add([obj.tick.start, obj.tick.end], `echo [${TOKEN}]-Progress-*`)
-  vdm.add(obj.tick.end, 'stopdemo')
+  vdm.add(obj.tick.end, 'volume 0; stopdemo')
   vdm.write()
 
   return vdm.path
