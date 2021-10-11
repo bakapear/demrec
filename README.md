@@ -1,8 +1,8 @@
 # demrec
-NodeJS wrapper for [SourceDemoRender](https://github.com/crashfort/SourceDemoRender)!
+NodeJS wrapper for [SourceVideoRender](https://github.com/crashfort/SourceDemoRender)!
 
 ## Setup
-- Get the latest version of [SourceDemoRender](https://github.com/crashfort/SourceDemoRender) (35+)
+- Get the latest version of [SourceVideoRender](https://github.com/crashfort/SourceDemoRender) (35+)
 - Configure settings in `config.ini`
 
 ## Usage
