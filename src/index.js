@@ -42,7 +42,7 @@ DemRec.prototype.setGame = function (app) {
 }
 
 DemRec.prototype.setLaunchOptions = function (opts) {
-  let args = [`+sv_cheats 1 -nomouse +unbindall +con_timestamp 1 +con_logfile ${ph.join(this.game.token, this.game.log)}`]
+  let args = [`+sv_cheats 1 -nomouse +unbindall +con_logfile ${ph.join(this.game.token, this.game.log)}`]
 
   let cfgs = this.cfg.General.game_cfgs
   if (cfgs) {
