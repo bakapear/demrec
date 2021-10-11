@@ -138,8 +138,8 @@ function createVDM (obj, file) {
     obj.tick.start -= obj.tick.padding
     obj.tick.end += obj.tick.padding
   }
-  if (obj.tick.start < 0) obj.tick.start = 0
-  if (obj.tick.end > ticks) obj.tick.end = ticks
+  if (!obj.tick.start || obj.tick.start < 0) obj.tick.start = 0
+  if (!obj.tick.end || obj.tick.end > ticks) obj.tick.end = ticks
   if (obj.tick.end - obj.tick.start < 10) throw new Error('Invalid demo tick range!')
 
   let vdm = new VDM(obj.demo)
