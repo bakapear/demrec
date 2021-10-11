@@ -70,6 +70,9 @@ DemRec.prototype.launch = async function () {
 }
 
 DemRec.prototype.record = async function (obj, output) {
+  if (!obj.demo) throw new Error('No demo provided!')
+  if (!output) output = ph.basename(obj.demo, 'dem') + 'mp4'
+
   let file = Date.now().toString()
 
   if (!obj.raw) obj.cmd = ['viewanim_reset; snd_soundmixer "Default_Mix"', obj.cmd].filter(x => x).join('; ')
