@@ -114,7 +114,7 @@ DemRec.prototype.record = async function (obj, output) {
 
 DemRec.prototype.exit = async function () {
   if (this.app) await this.app.exit()
-  this.kill()
+  await new Promise(resolve => setTimeout(() => this.kill(), 2000))
 }
 
 DemRec.prototype.kill = function () {
@@ -129,13 +129,16 @@ DemRec.prototype.kill = function () {
 module.exports = DemRec
 
 function createVDM (obj, file) {
+  let ticks = getDemoTicks(obj.demo)
+  if (!ticks) throw new Error('Invalid demo provided!')
+
   if (obj.tick.padding) {
     obj.tick.start -= obj.tick.padding
     obj.tick.end += obj.tick.padding
   }
   if (obj.tick.start < 0) obj.tick.start = 0
+  if (obj.tick.end > ticks) obj.tick.end = ticks
   if (obj.tick.end - obj.tick.start < 10) throw new Error('Invalid demo tick range!')
-  if (!validDemo(obj.demo)) throw new Error('Invalid demo provided!')
 
   let vdm = new VDM(obj.demo)
   if (obj.tick.start !== 0) vdm.add(0, `echo [${TOKEN}]-Skipping; demo_gototick ${obj.tick.start}`)
@@ -164,8 +167,9 @@ async function ffmpeg (cmd) {
   await new Promise(resolve => app.on('close', resolve))
 }
 
-function validDemo (file) {
-  if (!fs.existsSync(file)) return false
-  if (fs.readFileSync(file).slice(0, 8).toString() !== 'HL2DEMO\0') return false
-  return true
+function getDemoTicks (file) {
+  if (!fs.existsSync(file)) return null
+  let buffer = fs.readFileSync(file)
+  if (buffer.slice(0, 8).toString() !== 'HL2DEMO\0') return null
+  return buffer.readIntLE(1060, 4)
 }
