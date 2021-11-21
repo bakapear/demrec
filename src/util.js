@@ -64,9 +64,6 @@ module.exports = {
     }
     return res
   },
-  splitArgs (args) {
-    return args.replace(/\s(?=(?:[^'"`]*(['"`])[^'"`]*\1)*[^'"`]*$)/g, '\n').split('\n')
-  },
   watch (file, fn) {
     fs.watchFile(file, { persistent: true, interval: 0 }, (curr, prev) => {
       if (curr.mtime <= prev.mtime) return

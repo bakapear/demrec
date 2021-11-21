@@ -8,7 +8,8 @@ function VDM (demo) {
   this.blocks = []
 }
 
-VDM.prototype.add = function (tick, cmd = '') {
+VDM.prototype.add = function (tick, cmd, token) {
+  cmd = cmd.join('; ')
   if (Array.isArray(tick)) {
     let index, lastFrame
     let range = { start: tick[0], end: tick[1] }
@@ -17,7 +18,7 @@ VDM.prototype.add = function (tick, cmd = '') {
       let frame = Math.floor(index * step) - 1
       if (frame > 0 && lastFrame !== frame) {
         lastFrame = frame
-        this.blocks.push(T(++this.index, range.start + frame, cmd.replace('*', index)))
+        this.blocks.push(T(++this.index, range.start + frame, cmd.replace(token, index)))
       }
     }
   } else {
