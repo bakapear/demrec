@@ -125,7 +125,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
             util.unwatch(log)
             setTimeout(async () => {
               let dir = ph.join(svr.path, 'movies')
-              let files = arr.map(x => x.out)
+              let files = [...new Set(arr.map(x => x.out))]
               let res = []
 
               for (let i = 0; i < files.length; i++) {
@@ -175,7 +175,8 @@ function createVDM (demo, arr) {
 
   for (let i = 0; i < arr.length; i++) {
     let a = arr[i]
-    if (a.ticks[0] !== 0) vdm.add(last, ['endmovie', 'volume 0', mark(a.out, 'Skipping'), `demo_gototick ${a.ticks[0]}`])
+    let same = a.out === arr[i - 1]?.out
+    if (a.ticks[0] !== 0) vdm.add(last, [same ? '' : 'endmovie', 'volume 0', mark(a.out, 'Skipping'), `demo_gototick ${a.ticks[0]}`])
     vdm.add(a.ticks[0], [a.cmd, `startmovie ${a.out + '.mp4'} ${TOKEN}`])
     vdm.add(a.ticks, [mark(a.out, 'Rendering', '*')], '*')
     if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(a.out, 'Done'), 'stopdemo'])
