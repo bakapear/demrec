@@ -14,7 +14,7 @@ let TOKEN = 'demrec'
 ut.inherits(DemRec, require('events').EventEmitter)
 
 function DemRec (config) {
-  this.cfg = util.readINI(config)
+  this.cfg = util.readINI(config, ['FFMPEG'])
 
   if (!this.cfg) throw new Error(`Config file "${config}" not found!`)
   if (!steam.init()) throw new Error('Steam is not running!')
@@ -130,13 +130,27 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
               for (let i = 0; i < files.length; i++) {
                 let file = ph.join(dir, files[i])
-                let mp4 = ph.join(out, files[i] + '.mp4')
+                let tmp = ph.join(dir, 'tmp-' + files[i])
+                let mp4 = ph.join(out, files[i])
 
-                await ffmpeg(`-i "${file + '.mp4'}" -i "${file + '.wav'}" -c:v copy -c:a aac "${mp4}"`, progress => {
-                  this.emit('log', { file: files[i], type: 'Merging', progress })
+                await ffmpeg(`-i "${file + '.mp4'}" -i "${file + '.wav'}" -c:v copy -c:a aac "${this.cfg.FFMPEG ? tmp : mp4}.mp4"`, progress => {
+                  this.emit('log', { file: files[i], type: 'Merging', progress, index: this.cfg.FFMPEG ? 1 : null })
                 })
 
-                res.push(mp4)
+                if (this.cfg.FFMPEG) {
+                  let parts = this.cfg.FFMPEG
+                  for (let i = 0; i < parts.length; i++) {
+                    let cmd = parts[i].join(' ')
+                      .replaceAll('%IN%', tmp)
+                      .replaceAll('%DIR%', dir)
+                      .replaceAll('%OUT%', mp4)
+                    await ffmpeg(cmd, progress => {
+                      this.emit('log', { file: files[i], type: 'Merging', progress, index: i + 2 })
+                    })
+                  }
+                }
+
+                res.push(mp4 + '.mp4')
               }
 
               fs.rmSync(dir, { force: true, recursive: true })
