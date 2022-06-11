@@ -44,16 +44,24 @@ DemRec.prototype.setLaunchOptions = function (opts) {
   let args = [`-nomouse +sv_cheats 1 +unbindall +volume 0 +con_logfile ${ph.join(this.game.token, this.game.log)}`]
 
   let cfgs = this.cfg.General.game_cfgs
-  if (cfgs) {
-    args.push(`-insert_search_path "${ph.join(DATA, this.game.id + '.vpk')}"`)
-    cfgs.split(' ').filter(x => x).forEach(x => args.push(`+exec cfgs/${x}`))
-  }
+  let insert = [ph.join(DATA, this.game.id + '.vpk')]
+  if (cfgs) cfgs.split(' ').filter(x => x).forEach(x => args.push(`+exec cfgs/${x}`))
 
   let custom = this.cfg.General.game_custom
   if (custom) {
-    let paths = custom.split(',').map(x => ph.resolve(x)).join(',')
-    args.push(`-insert_search_path "${paths}"`)
+    let paths = custom.split(',').map(x => ph.resolve(x))
+    for (let path of paths) {
+      if (fs.existsSync(path)) {
+        if (!fs.statSync(path).isDirectory()) insert.push(path)
+        else {
+          let files = fs.readdirSync(path)
+          files.forEach(file => insert.push(ph.join(path, file)))
+        }
+      }
+    }
   }
+
+  args.push(`-insert_search_path "${insert.join(',')}"`)
 
   if (opts) args.push(opts)
 
