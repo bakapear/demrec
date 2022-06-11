@@ -49,6 +49,12 @@ DemRec.prototype.setLaunchOptions = function (opts) {
     cfgs.split(' ').filter(x => x).forEach(x => args.push(`+exec cfgs/${x}`))
   }
 
+  let custom = this.cfg.General.game_custom
+  if (custom) {
+    let paths = custom.split(',').map(x => ph.resolve(x)).join(',')
+    args.push(`-insert_search_path "${paths}"`)
+  }
+
   if (opts) args.push(opts)
 
   args.push('+echo ' + TOKEN)
