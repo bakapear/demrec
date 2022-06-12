@@ -27,6 +27,8 @@ function DemRec (config) {
   this.kill()
   if (!fs.existsSync(this.game.tmp)) fs.mkdirSync(this.game.tmp)
   if (!fs.existsSync(svr.movies)) fs.mkdirSync(svr.movies)
+
+  this.updateCustomFiles()
 }
 
 DemRec.prototype.setGame = function (app) {
@@ -34,18 +36,26 @@ DemRec.prototype.setGame = function (app) {
     id: app,
     ...steam.get(app),
     log: 'console.log',
-    demo: 'demo.dem'
+    demo: 'demo.dem',
+    custom: 'custom.vpk'
   }
   this.game.token = ph.join('cfg', TOKEN)
   this.game.tmp = ph.join(this.game.dir, this.game.token)
 }
 
-DemRec.prototype.setLaunchOptions = function (opts) {
-  let args = [`-nomouse +sv_cheats 1 +unbindall +volume 0 +con_logfile ${ph.join(this.game.token, this.game.log)}`]
+DemRec.prototype.updateCustomFiles = function () {
+  let vpk = ph.join(this.game.exe, '..', 'bin', 'vpk.exe')
+  let TMP = ph.join(DATA, 'TMP')
 
-  let cfgs = this.cfg.General.game_cfgs
-  let insert = [ph.join(DATA, this.game.id + '.vpk')]
-  if (cfgs) cfgs.split(' ').filter(x => x).forEach(x => args.push(`+exec cfgs/${x}`))
+  util.modify(ph.join(DATA, this.game.id.toString()), {
+    files: ['cfg/start.cfg'],
+    vars: {
+      '%LOG%': ph.join(this.game.token, this.game.log).replaceAll('\\', '/'),
+      '%CFG%': (this.cfg.General.game_cfgs || '').split(' ').map(x => `exec ${x}`).join('\n')
+    }
+  }, TMP)
+
+  let insert = []
 
   let custom = this.cfg.General.game_custom
   if (custom) {
@@ -61,11 +71,37 @@ DemRec.prototype.setLaunchOptions = function (opts) {
     }
   }
 
-  args.push(`-insert_search_path "${insert.join(',')}"`)
+  let dirs = []
+
+  for (let file of insert) {
+    if (!file.endsWith('.vpk')) util.copyFolder(file, TMP)
+    else {
+      // vpk extracting is a bit broken so we have to work around using vpk x command
+      let files = util.run(`"${vpk}" "${file}"`) // create folder structure and get file list
+      files = files.split(/\r?\n/).map(x => x.split(' ').pop())
+
+      let dir = ph.join(ph.dirname(file), ph.basename(file, '.vpk'))
+
+      util.run(`"${vpk}" x "${file}" ${files.join(' ')}`, { cwd: dir }) // add files to the folder structure using file list
+
+      dirs.push(dir)
+
+      util.copyFolder(dir, TMP)
+    }
+  }
+
+  util.run(`"${vpk}" "${TMP}"`)
+  fs.copyFileSync(TMP + '.vpk', ph.join(this.game.tmp, this.game.custom))
+
+  util.remove([...dirs, TMP, TMP + '.vpk'])
+}
+
+DemRec.prototype.setLaunchOptions = function (opts) {
+  let args = []
+
+  args.push(`-insert_search_path "${ph.join(this.game.token, this.game.custom).replaceAll('\\', '/')}"`)
 
   if (opts) args.push(opts)
-
-  args.push('+echo ' + TOKEN)
 
   svr.writeLaunchOptions(this.game.id, args.join(' '))
 }
@@ -167,7 +203,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
                 res.push(mp4 + '.mp4')
               }
 
-              fs.rmSync(dir, { force: true, recursive: true })
+              util.remove(dir)
               if (!fs.existsSync(dir)) fs.mkdirSync(dir)
 
               resolve(res)
@@ -181,16 +217,19 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
 DemRec.prototype.exit = async function () {
   if (this.app) await this.app.exit()
-  await new Promise(resolve => setTimeout(() => this.kill(), 2000))
+  await new Promise(resolve => setTimeout(() => {
+    this.kill()
+    resolve()
+  }, 2000))
 }
 
 DemRec.prototype.kill = function () {
-  let paths = [(svr && svr.path) ? ph.join(svr.path, 'movies') : null]
+  let paths = [(svr && svr.path) ? ph.join(svr.path, 'movies') : null, ph.join(DATA, 'TMP'), ph.join(DATA, 'TMP.vpk')]
   if (this.game) {
     paths.push(this.game.tmp)
     util.unwatch(ph.join(this.game.tmp, this.game.log))
   }
-  paths.forEach(x => x && fs.existsSync(x) && fs.rmSync(x, { force: true, recursive: true }))
+  util.remove(paths)
 }
 
 module.exports = DemRec

@@ -10,7 +10,7 @@ module.exports = {
       CommandLine: ['cmd', String],
       ProcessId: ['id', Number]
     }
-    let data = child.execSync('WMIC path win32_process get Caption,ExecutablePath,CommandLine,ProcessId').toString()
+    let data = this.run('WMIC path win32_process get Caption,ExecutablePath,CommandLine,ProcessId')
     let head = data.substr(0, data.indexOf('\n') + 1)
     let parts = head.split(/ (?=\w)/).map(x => {
       let name = NAME[x.trim()]
@@ -77,5 +77,45 @@ module.exports = {
   },
   unwatch (file) {
     fs.unwatchFile(file)
+  },
+  modify (dir, mod, out) {
+    if (fs.lstatSync(dir).isDirectory()) {
+      this.copyFolder(dir, out)
+      for (let i = 0; i < mod.files.length; i++) {
+        this.readReplace(ph.resolve(out, mod.files[i]), mod.vars)
+      }
+    } else {
+      fs.copyFileSync(dir, out)
+      this.readReplace(out, mod.vars)
+    }
+  },
+  copyFolder (source, target, first = true) {
+    if (!fs.existsSync(target)) fs.mkdirSync(target)
+    let files = []
+    let targetFolder = first ? target : ph.join(target, ph.basename(source))
+    if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder)
+    if (fs.lstatSync(source).isDirectory()) {
+      files = fs.readdirSync(source)
+      files.forEach(file => {
+        let curSource = ph.join(source, file)
+        if (fs.lstatSync(curSource).isDirectory()) this.copyFolder(curSource, targetFolder, false)
+        else fs.copyFileSync(curSource, ph.join(targetFolder, file))
+      })
+    }
+  },
+  readReplace (file, vars) {
+    let data = fs.readFileSync(file, 'utf-8')
+    let regex = new RegExp(`(${Object.keys(vars).join('|')})`, 'g')
+    data = data.replace(regex, (m, e) => vars[e])
+    fs.writeFileSync(file, data)
+  },
+  remove (paths) {
+    if (!Array.isArray(paths)) paths = [paths]
+    for (let path of paths) {
+      if (path && fs.existsSync(path)) fs.rmSync(path, { force: true, recursive: true })
+    }
+  },
+  run (cmd, opts) {
+    return child.execSync(cmd, opts).toString()
   }
 }

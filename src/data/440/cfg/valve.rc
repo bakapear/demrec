@@ -1,0 +1,3 @@
+// Run command line args
+exec start
+stuffcmds
