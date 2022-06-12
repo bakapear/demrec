@@ -37,7 +37,7 @@ DemRec.prototype.setGame = function (app) {
     ...steam.get(app),
     log: 'console.log',
     demo: 'demo.dem',
-    custom: 'custom.vpk'
+    custom: 'custom'
   }
   this.game.token = ph.join('cfg', TOKEN)
   this.game.tmp = ph.join(this.game.dir, this.game.token)
@@ -90,16 +90,15 @@ DemRec.prototype.updateCustomFiles = function () {
     }
   }
 
-  util.run(`"${vpk}" "${TMP}"`)
-  fs.copyFileSync(TMP + '.vpk', ph.join(this.game.tmp, this.game.custom))
+  util.copyFolder(TMP, ph.join(this.game.tmp, this.game.custom))
 
-  util.remove([...dirs, TMP, TMP + '.vpk'])
+  util.remove([...dirs, TMP])
 }
 
 DemRec.prototype.setLaunchOptions = function (opts) {
   let args = []
 
-  args.push(`-insert_search_path "${ph.join(this.game.token, this.game.custom).replaceAll('\\', '/')}"`)
+  args.push(`-insert_search_path "${ph.join(this.game.tmp, this.game.custom)}"`)
 
   if (opts) args.push(opts)
 
@@ -224,7 +223,7 @@ DemRec.prototype.exit = async function () {
 }
 
 DemRec.prototype.kill = function () {
-  let paths = [(svr && svr.path) ? ph.join(svr.path, 'movies') : null, ph.join(DATA, 'TMP'), ph.join(DATA, 'TMP.vpk')]
+  let paths = [(svr && svr.path) ? ph.join(svr.path, 'movies') : null, ph.join(DATA, 'TMP')]
   if (this.game) {
     paths.push(this.game.tmp)
     util.unwatch(ph.join(this.game.tmp, this.game.log))

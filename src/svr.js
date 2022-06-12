@@ -26,7 +26,7 @@ SVR.prototype.writeLaunchOptions = function (app, opts) {
 }
 
 SVR.prototype.run = async function (game) {
-  let proc = util.findProcess(x => x.cmd.split(' ').pop() === ph.basename(game.token))
+  let proc = util.findProcess(x => x.cmd.indexOf(game.token) !== -1)
   if (!proc) {
     let svr = child.exec(`${this.exe} ${game.id}`, { cwd: this.path })
     await new Promise(resolve => svr.on('exit', resolve))
