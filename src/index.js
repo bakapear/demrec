@@ -9,12 +9,11 @@ let VDM = require('./vdm')
 
 let DATA = ph.join(__dirname, 'data')
 
-let TOKEN = 'demrec'
-
 ut.inherits(DemRec, require('events').EventEmitter)
 
 function DemRec (config) {
   this.cfg = util.readINI(config, ['FFMPEG'])
+  this.token = this.cfg.General.game_token || 'demrec'
 
   if (!this.cfg) throw new Error(`Config file "${config}" not found!`)
   if (!steam.init()) throw new Error('Steam is not running!')
@@ -39,7 +38,7 @@ DemRec.prototype.setGame = function (app) {
     demo: 'demo.dem',
     custom: 'custom'
   }
-  this.game.token = ph.join('cfg', TOKEN)
+  this.game.token = ph.join('cfg', this.token)
   this.game.tmp = ph.join(this.game.dir, this.game.token)
 }
 
@@ -106,7 +105,7 @@ DemRec.prototype.setLaunchOptions = function (opts) {
 }
 
 DemRec.prototype.setProfile = function (cfg) {
-  svr.writeProfile(TOKEN, {
+  svr.writeProfile(this.token, {
     video: cfg.Video,
     motion_blur: cfg['Motion Blur'],
     velo: cfg['Velocity Overlay']
@@ -148,19 +147,19 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
     let cfg = `${i + 1}.cfg`
     fs.writeFileSync(ph.join(this.game.tmp, cfg), a.cmd)
-    a.cmd = `exec ${ph.join(TOKEN, cfg)}`
+    a.cmd = `exec ${ph.join(this.token, cfg)}`
   }
 
   if (!this.app) throw new Error('Game is not running!')
 
-  createVDM(dem, arr)
+  this.createVDM(dem, arr)
 
   this.app.send(['+playdemo', ph.join(this.game.token, this.game.demo)])
 
   return await new Promise(resolve => {
     let log = ph.join(this.game.tmp, this.game.log)
     util.watch(log, line => {
-      let regex = new RegExp(`\\[${TOKEN}]\\[(.*?)]\\[(.*?)]\\[(.*?)]`, 'g')
+      let regex = new RegExp(`\\[${this.token}]\\[(.*?)]\\[(.*?)]\\[(.*?)]`, 'g')
       let matches = line.replace(/\r?\n/g, '').matchAll(regex)
       while (true) {
         let match = matches.next()
@@ -231,19 +230,17 @@ DemRec.prototype.kill = function () {
   util.remove(paths)
 }
 
-module.exports = DemRec
-
-function createVDM (demo, arr) {
+DemRec.prototype.createVDM = function (demo, arr) {
   let vdm = new VDM(demo)
   let last = 0
 
-  let mark = (file, type, progress = 0) => `echo [${TOKEN}][${file}][${type}][${progress}]`
+  let mark = (file, type, progress = 0) => `echo [${this.token}][${file}][${type}][${progress}]`
 
   for (let i = 0; i < arr.length; i++) {
     let a = arr[i]
     let same = a.out === arr[i - 1]?.out
     if (a.ticks[0] !== 0) vdm.add(last, [same ? '' : 'endmovie', 'volume 0', mark(a.out, 'Skipping'), `demo_gototick ${a.ticks[0]}`])
-    vdm.add(a.ticks[0], [a.cmd, `startmovie ${a.out + '.mp4'} ${TOKEN}`])
+    vdm.add(a.ticks[0], [a.cmd, `startmovie ${a.out + '.mp4'} ${this.token}`])
     vdm.add(a.ticks, [mark(a.out, 'Rendering', '*')], '*')
     if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(a.out, 'Done'), 'stopdemo'])
     last = a.ticks[1]
@@ -253,6 +250,8 @@ function createVDM (demo, arr) {
 
   return vdm.path
 }
+
+module.exports = DemRec
 
 function getDemoTicks (file) {
   let buffer = fs.readFileSync(file)
