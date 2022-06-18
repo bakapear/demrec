@@ -240,7 +240,7 @@ function getDemoTicks (file) {
 
 function replaceDemGame (demo, game, out) {
   let SIZ = 1161
-  let SRC = new Uint8Array([0x00, 0x19, 0x8f, 0xc2, 0x75, 0x3c, 0x6c])
+  let SRC = new Uint8Array([0x8f, 0xc2, 0x75, 0x3c, 0x6c])
 
   let buf = fs.readFileSync(demo)
   buf[SIZ] += game.length - 2
