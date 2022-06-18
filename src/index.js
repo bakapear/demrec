@@ -20,7 +20,7 @@ function DemRec (config) {
   if (!steam.init()) throw new Error('Steam is not running!')
   if (!svr.init(this.cfg.General.svr_dir)) throw new Error('Could not find valid SVR directory!')
 
-  this.setGame(this.cfg.General.game_appid)
+  this.setGame(this.cfg.General.game_app)
   this.setLaunchOptions(this.cfg.General.game_args)
   this.setProfile(this.cfg)
 
