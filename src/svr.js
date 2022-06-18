@@ -32,14 +32,14 @@ SVR.prototype.run = async function (game) {
     await new Promise(resolve => svr.on('exit', resolve))
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     let app = util.findProcess(x => x.path.toLowerCase() === game.exe.toLowerCase())
     app.send = cmd => child.spawn(game.exe, ['-hijack', ...cmd])
     app.exit = () => process.kill(app.id)
     if (proc) resolve(app)
     else {
       let log = ph.join(game.tmp, game.log)
-      util.watch(log, line => {
+      util.watch(log, () => {
         util.unwatch(log)
         resolve(app)
       })
