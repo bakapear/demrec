@@ -156,9 +156,15 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   this.app.send(['+playdemo', ph.join(this.game.token, this.game.demo)])
 
-  return await new Promise(resolve => {
+  return await new Promise((resolve, reject) => {
     let log = ph.join(this.game.tmp, this.game.log)
     util.watch(log, line => {
+      let map = line.match(/^Missing map maps\/(.*?), {2}disconnecting/)
+      if (map) {
+        util.unwatch(log)
+        reject(Error(`Map '${map[1]}' not found!`))
+        return
+      }
       let regex = new RegExp(`\\[${this.token}]\\[(.*?)]\\[(.*?)]\\[(.*?)]`, 'g')
       let matches = line.replace(/\r?\n/g, '').matchAll(regex)
       while (true) {
