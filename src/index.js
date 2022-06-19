@@ -105,9 +105,11 @@ DemRec.prototype.record = async function (demo, arr, out) {
   for (let i = 0; i < arr.length; i++) {
     let a = arr[i]
 
+    if (!a.pre) a.pre = 0
     if (!a.ticks[0] || a.ticks[0] < 0) a.ticks[0] = 0
     if (!a.ticks[1] || a.ticks[1] > total) a.ticks[1] = total
     if (a.ticks[1] - a.ticks[0] < 10) throw new Error('Invalid demo tick range!')
+    if (a.ticks[0] - a.pre < 0) throw new Error('Tick pre setting not possible!')
     if (i !== 0 && a.ticks[0] <= arr[i - 1].ticks[1]) throw new Error(`Ticks of [${i}] & [${i + 1}] overlap!`)
 
     a.out = (a.out || `out-${i + 1}`).replace('.mp4', '')
@@ -218,7 +220,8 @@ DemRec.prototype.createVDM = function (demo, arr) {
   for (let i = 0; i < arr.length; i++) {
     let a = arr[i]
     let same = a.out === arr[i - 1]?.out
-    if (a.ticks[0] !== 0) vdm.add(last, [same ? '' : 'endmovie', 'volume 0', mark(a.out, 'Skipping'), `demo_gototick ${a.ticks[0]}`])
+    if (a.ticks[0] !== 0) vdm.add(last, [same ? '' : 'endmovie', 'volume 0', mark(a.out, 'Skipping'), `demo_gototick ${a.ticks[0] - a.pre}`])
+    if (a.pre) vdm.add(a.ticks[0] - a.pre, [a.cmd, 'volume 0'])
     vdm.add(a.ticks[0], [a.cmd, `startmovie ${a.out + '.mp4'} ${this.game.token}`])
     vdm.add(a.ticks, [mark(a.out, 'Rendering', '*')], '*')
     if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(a.out, 'Done'), 'stopdemo'])
