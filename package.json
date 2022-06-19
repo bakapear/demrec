@@ -1,6 +1,6 @@
 {
   "name": "demrec",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "Demo Recorder Renderer",
   "main": "src/index.js",
   "scripts": {
