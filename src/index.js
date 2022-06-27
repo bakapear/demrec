@@ -165,30 +165,36 @@ DemRec.prototype.record = async function (demo, arr, out) {
               for (let i = 0; i < files.length; i++) {
                 let a = arr[i]
                 let file = ph.join(dir, files[i])
-                let tmp = ph.join(dir, 'tmp-' + files[i])
-                let mp4 = ph.join(out, files[i])
+                let input = ph.join(dir, 'tmp-' + files[i])
+                let result = ph.join(out, files[i])
 
-                await ffmpeg(`-i "${file + '.mp4'}" -i "${file + '.wav'}" -c:v copy -c:a aac "${this.cfg.FFMPEG ? tmp : mp4}.mp4"`, progress => {
+                await ffmpeg(`-i "${file + '.mp4'}" -i "${file + '.wav'}" -c:v copy -c:a aac "${this.cfg.FFMPEG ? input : result}.mp4"`, progress => {
                   this.emit('log', { file: files[i], type: 'Merging', progress, index: this.cfg.FFMPEG ? 1 : null })
                 })
+                util.remove([file + '.mp4', file + '.wav'])
 
                 if (this.cfg.FFMPEG) {
                   let parts = this.cfg.FFMPEG
                   for (let i = 0; i < parts.length; i++) {
+                    let pipe = [`${file}_${i}`, `${file}_${i + 1}`]
                     let cmd = parts[i].join(' ')
-                      .replaceAll('%IN%', tmp)
+                      .replaceAll('%PREV%', pipe[0])
+                      .replaceAll('%NEXT%', pipe[1])
+                      .replaceAll('%IN%', input)
                       .replaceAll('%DIR%', dir)
                       .replaceAll('%TIME%', util.getTickTime(a.ticks[1] - a.ticks[0]))
                       .replaceAll('%TIME_START%', util.getTickTime(a.padding))
                       .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
-                      .replaceAll('%OUT%', mp4)
+                      .replaceAll('%OUT%', result)
+
                     await ffmpeg(cmd, progress => {
                       this.emit('log', { file: files[i], type: 'Merging', progress, index: i + 2 })
                     })
+                    util.remove(pipe[0])
                   }
                 }
 
-                res.push(mp4 + '.mp4')
+                res.push(result + '.mp4')
               }
 
               util.remove(dir)
