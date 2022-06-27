@@ -106,6 +106,9 @@ DemRec.prototype.record = async function (demo, arr, out) {
     let a = arr[i]
 
     if (!a.pre) a.pre = 0
+    if (!a.padding) a.padding = 0
+    a.ticks[0] -= a.padding
+    a.ticks[1] += a.padding
     if (!a.ticks[0] || a.ticks[0] < 0) a.ticks[0] = 0
     if (!a.ticks[1] || a.ticks[1] > total) a.ticks[1] = total
     if (a.ticks[1] - a.ticks[0] < 10) throw new Error('Invalid demo tick range!')
@@ -121,6 +124,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
     let cfg = `vdm_${i + 1}.cfg`
     fs.writeFileSync(ph.join(this.game.tmp, 'custom', 'cfg', cfg), a.cmd)
     a.cmd = `exec ${cfg}`
+
+    arr[i] = a
   }
 
   if (!this.app) throw new Error('Game is not running!')
@@ -158,6 +163,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
               let res = []
 
               for (let i = 0; i < files.length; i++) {
+                let a = arr[i]
                 let file = ph.join(dir, files[i])
                 let tmp = ph.join(dir, 'tmp-' + files[i])
                 let mp4 = ph.join(out, files[i])
@@ -172,6 +178,9 @@ DemRec.prototype.record = async function (demo, arr, out) {
                     let cmd = parts[i].join(' ')
                       .replaceAll('%IN%', tmp)
                       .replaceAll('%DIR%', dir)
+                      .replaceAll('%TIME%', util.getTickTime(a.ticks[1] - a.ticks[0]))
+                      .replaceAll('%TIME_START%', util.getTickTime(a.padding))
+                      .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
                       .replaceAll('%OUT%', mp4)
                     await ffmpeg(cmd, progress => {
                       this.emit('log', { file: files[i], type: 'Merging', progress, index: i + 2 })
