@@ -177,6 +177,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
                   let parts = this.cfg.FFMPEG
                   for (let i = 0; i < parts.length; i++) {
                     let pipe = [`${file}_${i}`, `${file}_${i + 1}`]
+                    if (!i) pipe[0] = input
                     let cmd = parts[i].join(' ')
                       .replaceAll('%PREV%', pipe[0])
                       .replaceAll('%NEXT%', pipe[1])
@@ -190,7 +191,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
                     await ffmpeg(cmd, progress => {
                       this.emit('log', { file: files[i], type: 'Merging', progress, index: i + 2 })
                     })
-                    util.remove(pipe[0])
+                    util.remove(pipe[0] + '.mp4')
                   }
                 }
 
