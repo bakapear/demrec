@@ -184,6 +184,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
                       .replaceAll('%IN%', input)
                       .replaceAll('%DIR%', dir)
                       .replaceAll('%TIME%', util.getTickTime(a.ticks[1] - a.ticks[0]))
+                      .replace(/%TIME\[(.*?)\]%/g, (a, b) => util.getTickTime(a.ticks[1] - a.ticks[0]) + Number(b))
                       .replaceAll('%TIME_START%', util.getTickTime(a.padding))
                       .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
                       .replaceAll('%OUT%', result)
