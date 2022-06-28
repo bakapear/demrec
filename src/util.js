@@ -118,8 +118,8 @@ module.exports = {
   run (cmd, opts) {
     return child.execSync(cmd, opts).toString()
   },
-  getTickTime (ticks) {
-    return this.formatTime(ticks / (200 / 3) * 1000)
+  getTickTime (ticks, add = 0) {
+    return this.formatTime((ticks / (200 / 3) + add) * 1000)
   },
   formatTime (ms, decimals = 3) {
     if (!ms) return null
