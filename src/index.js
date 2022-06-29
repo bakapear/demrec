@@ -136,7 +136,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   this.app.send(['+playdemo', file])
 
-  return await new Promise((resolve, reject) => {
+  let result = await new Promise((resolve, reject) => {
     let log = ph.join(this.game.tmp, this.game.log)
     util.watch(log, line => {
       let map = line.match(/^Missing map maps\/(.*?), {2}disconnecting/)
@@ -211,6 +211,10 @@ DemRec.prototype.record = async function (demo, arr, out) {
       }
     })
   })
+
+  util.remove([dem, dem.replace('.dem', '.vdm')])
+
+  return result
 }
 
 DemRec.prototype.exit = async function () {
