@@ -15,7 +15,7 @@ module.exports = async function (cmd, progress) {
       let t = time(msg.match(/time=(.*?) /)?.[1])
       if (t && progress) {
         let p = Number((t * 100 / total).toFixed(2))
-        progress(p > 100 ? 100 : p)
+        if (p < 100) progress(p)
       }
     }
   })
@@ -23,7 +23,10 @@ module.exports = async function (cmd, progress) {
   await new Promise(resolve => {
     app.on('close', e => {
       if (e) throw Error(msg.split('\r\n').slice(-2, -1)[0])
-      else resolve()
+      else {
+        progress(100)
+        resolve()
+      }
     })
   })
 }
