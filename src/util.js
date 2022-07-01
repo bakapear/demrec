@@ -64,15 +64,17 @@ module.exports = {
     }
     return res
   },
-  watch (file, fn) {
+  watch (file, fn, autoclose = false) {
     fs.watchFile(file, { persistent: true, interval: 0 }, (curr, prev) => {
       if (curr.mtime <= prev.mtime) return
+      if (autoclose) this.unwatch(file)
       let diff = curr.size - prev.size
+      if (diff < 0) return
       let buffer = Buffer.alloc(diff)
       let fd = fs.openSync(file, 'r')
       fs.readSync(fd, buffer, 0, diff, prev.size)
       fs.closeSync(fd)
-      fn(buffer.toString())
+      fn({ data: buffer.toString(), close: () => this.unwatch(file) })
     })
   },
   unwatch (file) {
@@ -135,5 +137,11 @@ module.exports = {
     })
     ms = ms.toString()
     return t.join(':') + (decimals ? ms.substr(ms.indexOf('.'), decimals + 1) : '')
+  },
+  addListeners (app, listeners, listener) {
+    for (let l of listeners) app.addListener(l, listener)
+  },
+  removeListeners (app, listeners, listener) {
+    for (let l of listeners) app.removeListener(l, listener)
   }
 }

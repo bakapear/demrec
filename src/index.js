@@ -7,6 +7,7 @@ let steam = require('./steam')
 let svr = require('./svr')
 let VDM = require('./vdm')
 
+let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
 let DATA = ph.join(__dirname, 'data')
 
 ut.inherits(DemRec, require('events').EventEmitter)
@@ -82,7 +83,22 @@ DemRec.prototype.setProfile = function (cfg) {
 
 DemRec.prototype.launch = async function () {
   this.updateCustomFiles()
-  this.app = await svr.run(this.game)
+
+  let overlay = ph.join(steam.path, 'GameOverlayUI.exe')
+  let replace = overlay + 'DISABLED'
+
+  let act = () => fs.existsSync(replace) && fs.renameSync(replace, overlay)
+
+  this.app = await svr.run(this.game, {
+    hello: () => {
+      fs.renameSync(overlay, replace)
+      util.addListeners(process, KILLERS, act)
+    },
+    init: () => {
+      act()
+      util.removeListeners(process, KILLERS, act)
+    }
+  })
 }
 
 DemRec.prototype.record = async function (demo, arr, out) {
@@ -137,16 +153,15 @@ DemRec.prototype.record = async function (demo, arr, out) {
   this.app.send(['+playdemo', file])
 
   let result = await new Promise((resolve, reject) => {
-    let log = ph.join(this.game.tmp, this.game.log)
-    util.watch(log, line => {
-      let map = line.match(/^Missing map maps\/(.*?), {2}disconnecting/)
+    util.watch(ph.join(this.game.tmp, this.game.log), log => {
+      let map = log.data.match(/^Missing map maps\/(.*?), {2}disconnecting/)
       if (map) {
-        util.unwatch(log)
+        log.close()
         reject(Error(`Map '${map[1]}' not found!`))
         return
       }
       let regex = new RegExp(`\\[${this.game.token}]\\[(.*?)]\\[(.*?)]\\[(.*?)]`, 'g')
-      let matches = line.replace(/\r?\n/g, '').matchAll(regex)
+      let matches = log.data.replace(/\r?\n/g, '').matchAll(regex)
       while (true) {
         let match = matches.next()
         if (match.done) break
@@ -156,7 +171,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
           this.emit('log', { file, type, progress })
           if (type === 'Done') {
-            util.unwatch(log)
+            log.close()
             setTimeout(async () => {
               let dir = ph.join(svr.path, 'movies')
               let files = [...new Set(arr.map(x => x.out))]
