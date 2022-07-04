@@ -143,5 +143,8 @@ module.exports = {
   },
   removeListeners (app, listeners, listener) {
     for (let l of listeners) app.removeListener(l, listener)
+  },
+  async sleep (ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 }

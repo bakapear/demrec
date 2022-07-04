@@ -10,20 +10,14 @@ NodeJS wrapper for [SourceVideoRender](https://github.com/crashfort/SourceDemoRe
 let DemRec = require('demrec')
 let dr = new DemRec('config.ini')
 
+// prepare event log
+let Events = Object.keys(DemRec.Events)
+dr.on('log', data => {
+  console.log(`EVENT: ${Events[data.event]}`)
+})
+
 // launch the game
 await dr.launch()
-
-// prepare progress log
-dr.on('log', data => {
-  switch(data.type) {
-    case 'Skipping':
-      console.log(`[${data.file}] Fast-Forwarding to start tick...`)
-      break
-    case 'Rendering':
-      console.log(`[${data.file}] Rendering video file... ${data.progress}%`)
-      break
-  }
-})
 
 // render a demo
 await dr.record('cooldemo.dem', {
