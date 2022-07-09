@@ -43,6 +43,14 @@ class DemRec extends require('events') {
   }
 }
 
+Object.defineProperty(DemRec.Events, 'add', {
+  value: function (events) {
+    let len = Object.keys(this).length
+    if (!Array.isArray(events)) events = [events]
+    for (let event of events) this[event] = len++
+  }
+})
+
 DemRec.prototype.setGame = function (app) {
   this.game = {
     id: app,
