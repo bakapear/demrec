@@ -106,7 +106,7 @@ DemRec.prototype.setProfile = function (cfg) {
   })
 }
 
-DemRec.prototype.launch = async function () {
+DemRec.prototype.launch = async function (silent = false) {
   this.updateCustomFiles()
 
   let overlay = ph.join(steam.path, 'GameOverlayUI.exe')
@@ -114,7 +114,7 @@ DemRec.prototype.launch = async function () {
 
   let act = () => fs.existsSync(replace) && fs.renameSync(replace, overlay)
 
-  this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
+  if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
 
   this.app = await svr.run(this.game, {
     hello: () => {
@@ -127,7 +127,7 @@ DemRec.prototype.launch = async function () {
     }
   })
 
-  this.emit('log', { event: DemRec.Events.GAME_LAUNCH_END })
+  if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH_END })
 }
 
 DemRec.prototype.record = async function (demo, arr, out) {
@@ -239,12 +239,12 @@ DemRec.prototype.record = async function (demo, arr, out) {
   return result
 }
 
-DemRec.prototype.exit = async function () {
-  this.emit('log', { event: DemRec.Events.GAME_EXIT })
+DemRec.prototype.exit = async function (silent = false) {
+  if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT })
   if (this.app) await this.app.exit()
   await util.sleep(1234)
   this.kill()
-  this.emit('log', { event: DemRec.Events.GAME_EXIT_END })
+  if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT_END })
 }
 
 DemRec.prototype.kill = function () {
