@@ -131,6 +131,8 @@ DemRec.prototype.launch = async function (silent = false) {
 }
 
 DemRec.prototype.record = async function (demo, arr, out) {
+  if (!this.app) throw new Error('Game not running!')
+
   if (!out) throw new Error('No output directory provided!')
   if (!fs.existsSync(out)) fs.mkdirSync(out)
 
