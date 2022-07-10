@@ -27,7 +27,7 @@ SVR.prototype.writeLaunchOptions = function (app, opts) {
 }
 
 SVR.prototype.run = async function (game, events) {
-  let proc = util.findProcess(x => x.name === ph.basename(game.exe) && x.cmd.indexOf(game.token) !== -1)
+  let proc = await util.findProcess(x => x.name === ph.basename(game.exe) && x.cmd.indexOf(game.token) !== -1)
   if (!proc) {
     let svr = child.exec(`${this.exe} ${game.id}`, { cwd: this.path })
     await new Promise(resolve => {
@@ -43,13 +43,14 @@ SVR.prototype.run = async function (game, events) {
     svr.on('error', e => { throw e })
   }
 
+  let app = await util.findProcess(x => x.path.toLowerCase() === game.exe.toLowerCase())
+  app.send = cmd => child.spawn(game.exe, ['-hijack', ...cmd])
+  app.exit = () => {
+    try { process.kill(app.id) } catch (e) { return false }
+    app = null
+  }
+
   return new Promise(resolve => {
-    let app = util.findProcess(x => x.path.toLowerCase() === game.exe.toLowerCase())
-    app.send = cmd => child.spawn(game.exe, ['-hijack', ...cmd])
-    app.exit = () => {
-      try { process.kill(app.id) } catch (e) { return false }
-      app = null
-    }
     util.watch(ph.join(game.tmp, game.log), () => resolve(app), true)
     app.send(['+echo heartbeat'])
   })

@@ -12,8 +12,8 @@ function Steam (path) {
   this.path = path
 }
 
-Steam.prototype.init = function () {
-  let proc = util.findProcess(x => x.path.toLowerCase().endsWith(this.path))
+Steam.prototype.init = async function () {
+  let proc = await util.findProcess(x => x.path.toLowerCase().endsWith(this.path))
   if (proc) {
     this.path = ph.join(proc.path, '..')
     return true

@@ -12,17 +12,13 @@ let DATA = ph.join(__dirname, 'data')
 class DemRec extends require('events') {
   constructor (config) {
     super()
+    if (!fs.existsSync(config)) throw new Error(`Config file "${config}" not found!`)
+
     this.cfg = util.readINI(config, ['FFMPEG'])
 
-    if (!this.cfg) throw new Error(`Config file "${config}" not found!`)
-    if (!steam.init()) throw new Error('Steam is not running!')
     if (!svr.init(this.cfg.General.svr_dir)) throw new Error('Could not find valid SVR directory!')
-    this.setGame(this.cfg.General.game_app)
-    this.setLaunchOptions(this.cfg.General.game_args)
-    this.setProfile(this.cfg)
 
-    this.kill()
-    if (!fs.existsSync(svr.movies)) fs.mkdirSync(svr.movies)
+    this.initialized = false
   }
 
   static Events = {
@@ -50,6 +46,19 @@ Object.defineProperty(DemRec.Events, 'add', {
     for (let event of events) this[event] = len++
   }
 })
+
+DemRec.prototype.init = async function () {
+  if (!await steam.init()) throw new Error('Steam is not running!')
+
+  this.setGame(this.cfg.General.game_app)
+  this.setLaunchOptions(this.cfg.General.game_args)
+  this.setProfile(this.cfg)
+
+  this.kill()
+  if (!fs.existsSync(svr.movies)) fs.mkdirSync(svr.movies)
+
+  this.initialized = true
+}
 
 DemRec.prototype.setGame = function (app) {
   this.game = {
@@ -107,6 +116,7 @@ DemRec.prototype.setProfile = function (cfg) {
 }
 
 DemRec.prototype.launch = async function (silent = false) {
+  if (!this.initialized) await this.init()
   this.updateCustomFiles()
 
   let overlay = ph.join(steam.path, 'GameOverlayUI.exe')
@@ -131,6 +141,7 @@ DemRec.prototype.launch = async function (silent = false) {
 }
 
 DemRec.prototype.record = async function (demo, arr, out) {
+  if (!this.initialized) await this.init()
   if (!this.app) throw new Error('Game not running!')
 
   if (!out) throw new Error('No output directory provided!')

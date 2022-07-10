@@ -3,14 +3,14 @@ let ph = require('path')
 let child = require('child_process')
 
 module.exports = {
-  listProcesses () {
+  async listProcesses () {
     let NAME = {
       Caption: ['name', String],
       ExecutablePath: ['path', String],
       CommandLine: ['cmd', String],
       ProcessId: ['id', Number]
     }
-    let data = this.run('WMIC path win32_process get Caption,ExecutablePath,CommandLine,ProcessId')
+    let data = await this.run('WMIC path win32_process get Caption,ExecutablePath,CommandLine,ProcessId')
     let head = data.substr(0, data.indexOf('\n') + 1)
     let parts = head.split(/ (?=\w)/).map(x => {
       let name = NAME[x.trim()]
@@ -29,8 +29,9 @@ module.exports = {
     }
     return res
   },
-  findProcess (fn) {
-    return this.listProcesses().find(fn)
+  async findProcess (fn) {
+    let procs = await this.listProcesses()
+    return procs.find(fn)
   },
   readINI (file, array = []) {
     file = fs.readFileSync(ph.join(file), 'utf-8').replace(/(".*?"|'.*?')|((#|;)[^\r\n]*$)/gm, (a, b, c) => c ? '' : a)
@@ -117,8 +118,13 @@ module.exports = {
       if (path && fs.existsSync(path)) fs.rmSync(path, { force: true, recursive: true })
     }
   },
-  run (cmd, opts) {
-    return child.execSync(cmd, opts).toString()
+  async run (cmd, opts) {
+    return new Promise((resolve, reject) => {
+      child.exec(cmd, opts, (err, data) => {
+        if (err) reject(err)
+        else resolve(data)
+      })
+    })
   },
   getTickTime (ticks, add = 0) {
     return this.formatTime((ticks / (200 / 3) + add) * 1000)
