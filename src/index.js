@@ -188,7 +188,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   if (!this.app) throw new Error('Game is not running!')
 
-  this.createVDM(dem, arr)
+  createVDM(dem, arr, this.game.token)
 
   clearDemoGame(dem, dem)
 
@@ -269,52 +269,6 @@ DemRec.prototype.kill = function () {
   util.remove(paths)
 }
 
-DemRec.prototype.createVDM = function (demo, arr) {
-  let vdm = new VDM(demo)
-  let last = 0
-  let skip = 0
-
-  let mark = (file, events, progress) => {
-    return `echo [${this.game.token}][${file}][${events.filter(x => x).join(',')}]` + (progress ? `[${progress}]` : '')
-  }
-
-  for (let i = 0; i < arr.length; i++) {
-    let a = arr[i]
-    let same = a.out === arr[i - 1]?.out
-
-    // goto
-    if (a.ticks[0] !== 0) {
-      vdm.add(last, [
-        last && !same ? 'endmovie' : '',
-        mark(i, [last && !same ? DemRec.Events.DEMO_RECORD_END : null, DemRec.Events.DEMO_SKIP]),
-        'volume 0',
-        `demo_gototick ${a.ticks[0] - a.pre}`
-      ])
-      skip++
-    }
-
-    // start
-    if (a.pre) vdm.add(a.ticks[0] - a.pre, [a.cmd, 'volume 0'])
-    vdm.add(a.ticks[0], [
-      mark(i, [skip ? (DemRec.Events.DEMO_SKIP_END) : null, DemRec.Events.DEMO_RECORD]),
-      a.cmd,
-      `startmovie ${a.out + '.mp4'} ${this.game.token}`
-    ])
-
-    // ticks
-    vdm.add(a.ticks, [mark(i, [DemRec.Events.DEMO_RECORD], '*')], '*')
-
-    // finish
-    if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(i, [DemRec.Events.DEMO_RECORD_END]), 'stopdemo'])
-
-    last = a.ticks[1]
-  }
-
-  vdm.write()
-
-  return vdm.path
-}
-
 DemRec.prototype.runFFMPEG = async function (arr, demo, files, dir, out) {
   let res = []
   for (let i = 0; i < files.length; i++) {
@@ -359,6 +313,52 @@ DemRec.prototype.runFFMPEG = async function (arr, demo, files, dir, out) {
 }
 
 module.exports = DemRec
+
+function createVDM (demo, arr, token) {
+  let vdm = new VDM(demo)
+  let last = 0
+  let skip = 0
+
+  let mark = (file, events, progress) => {
+    return `echo [${token}][${file}][${events.filter(x => x).join(',')}]` + (progress ? `[${progress}]` : '')
+  }
+
+  for (let i = 0; i < arr.length; i++) {
+    let a = arr[i]
+    let same = a.out === arr[i - 1]?.out
+
+    // goto
+    if (a.ticks[0] !== 0) {
+      vdm.add(last, [
+        last && !same ? 'endmovie' : '',
+        mark(i, [last && !same ? DemRec.Events.DEMO_RECORD_END : null, DemRec.Events.DEMO_SKIP]),
+        'volume 0',
+        `demo_gototick ${a.ticks[0] - a.pre}`
+      ])
+      skip++
+    }
+
+    // start
+    if (a.pre) vdm.add(a.ticks[0] - a.pre, [a.cmd, 'volume 0'])
+    vdm.add(a.ticks[0], [
+      mark(i, [skip ? (DemRec.Events.DEMO_SKIP_END) : null, DemRec.Events.DEMO_RECORD]),
+      a.cmd,
+      `startmovie ${a.out + '.mp4'} ${token}`
+    ])
+
+    // ticks
+    vdm.add(a.ticks, [mark(i, [DemRec.Events.DEMO_RECORD], '*')], '*')
+
+    // finish
+    if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(i, [DemRec.Events.DEMO_RECORD_END]), 'stopdemo'])
+
+    last = a.ticks[1]
+  }
+
+  vdm.write()
+
+  return vdm.path
+}
 
 function getDemoTicks (file) {
   let buffer = fs.readFileSync(file)
