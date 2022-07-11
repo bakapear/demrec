@@ -1,6 +1,9 @@
+let util = require('./util')
 let child = require('child_process')
 
 module.exports = async function (cmd, progress) {
+  await util.sleep(1234)
+
   let app = child.spawn('ffmpeg.exe', [...splitArgs(cmd), '-hide_banner', '-y'])
 
   let total = 0
