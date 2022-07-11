@@ -4,30 +4,21 @@ let child = require('child_process')
 
 module.exports = {
   async listProcesses () {
-    let NAME = {
-      Caption: ['name', String],
-      ExecutablePath: ['path', String],
-      CommandLine: ['cmd', String],
-      ProcessId: ['id', Number]
-    }
-    let data = await this.run('WMIC path win32_process get Caption,ExecutablePath,CommandLine,ProcessId')
-    let head = data.substr(0, data.indexOf('\n') + 1)
-    let parts = head.split(/ (?=\w)/).map(x => {
-      let name = NAME[x.trim()]
-      return { key: name[0], type: name[1], length: x.length }
-    })
-    let pos = head.length
-    let res = []
-    while (pos < data.length) {
-      let obj = {}
-      for (let i = 0; i < parts.length; i++) {
-        obj[parts[i].key] = parts[i].type(data.substr(pos, parts[i].length).trim())
-        pos += parts[i].length
+    switch (process.platform) {
+      case 'win32': {
+        let data = await this.run('Get-CimInstance Win32_Process | Select-Object -Property Caption,ExecutablePath,CommandLine,ProcessId,ParentProcessId | ConvertTo-Json', { shell: 'powershell.exe' })
+        return JSON.parse(data).map(x => {
+          return {
+            name: x.Caption,
+            path: x.ExecutablePath,
+            cmd: x.CommandLine,
+            id: Number(x.ProcessId) || null,
+            parent: Number(x.ParentProcessId) || null
+          }
+        })
       }
-      pos += parts.length - 1
-      res.push(obj)
+      default: throw Error(`Platform '${process.platform}' not supported.`)
     }
-    return res
   },
   async findProcess (fn) {
     let procs = await this.listProcesses()
