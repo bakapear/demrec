@@ -1,9 +1,6 @@
-let util = require('./util')
 let child = require('child_process')
 
-module.exports = async function (cmd, progress) {
-  await util.sleep(1234)
-
+module.exports = async function ffmpeg (cmd, progress, retries = 5) {
   let app = child.spawn('ffmpeg.exe', [...splitArgs(cmd), '-hide_banner', '-y'])
 
   let total = 0
@@ -23,10 +20,14 @@ module.exports = async function (cmd, progress) {
     }
   })
 
-  await new Promise(resolve => {
+  await new Promise((resolve, reject) => {
     app.on('close', e => {
-      if (e) throw Error(msg.split('\r\n').slice(-2, -1)[0])
-      else {
+      if (e) {
+        let error = msg.split('\r\n').slice(-2, -1)[0]
+        if (error.indexOf('Invalid data found when processing input') > 0 && retries > 0) {
+          setTimeout(() => ffmpeg(cmd, progress, --retries).then(resolve).catch(reject), 1234)
+        } else throw Error(error)
+      } else {
         progress(100)
         resolve()
       }
