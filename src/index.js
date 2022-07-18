@@ -193,7 +193,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
   clearDemoGame(dem, dem)
 
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
-  this.app.send(['+mat_fullbright', '0',  '+playdemo', name])
+  this.app.send(['+mat_fullbright', '0', '+playdemo', name])
 
   let result = await new Promise((resolve, reject) => {
     let files = [...new Set(arr.map(x => x.out))]
