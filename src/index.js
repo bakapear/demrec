@@ -150,8 +150,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
   if (!demo) throw new Error('No demo provided!')
   if (!fs.existsSync(demo)) throw new Error('Demo path does not exist!')
 
-  let total = getDemoTicks(demo)
-  if (!total) throw new Error('Invalid demo provided!')
+  let info = getDemoInfo(demo)
+  if (!info) throw new Error('Invalid demo provided!')
 
   let name = ph.basename(demo)
 
@@ -168,7 +168,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
     a.ticks[0] -= a.padding
     a.ticks[1] += a.padding
     if (!a.ticks[0] || a.ticks[0] < 0) a.ticks[0] = 0
-    if (!a.ticks[1] || a.ticks[1] > total) a.ticks[1] = total
+    if (!a.ticks[1] || a.ticks[1] > info.total) a.ticks[1] = info.total
     if (a.ticks[1] - a.ticks[0] < 10) throw new Error('Invalid demo tick range!')
     if (a.ticks[0] - a.pre < 0) throw new Error('Tick pre setting not possible!')
     if (i !== 0 && a.ticks[0] <= arr[i - 1].ticks[1]) throw new Error(`Ticks of [${i}] & [${i + 1}] overlap!`)
@@ -191,6 +191,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
   createVDM(dem, arr, this.game.token)
 
   clearDemoGame(dem, dem)
+
+  let povr = addParticleOverride(this.game.tmp, info.map)
 
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
   this.app.send(['+mat_fullbright', '0', '+playdemo', name])
@@ -247,7 +249,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
     })
   })
 
-  util.remove([dem, dem.replace('.dem', '.vdm')])
+  util.remove([dem, dem.replace('.dem', '.vdm'), povr])
 
   return result
 }
@@ -360,10 +362,20 @@ function createVDM (demo, arr, token) {
   return vdm.path
 }
 
-function getDemoTicks (file) {
+function addParticleOverride (tmp, map) {
+  let dir = ph.join(tmp, 'custom', 'maps')
+  let pipe = [ph.join(dir, 'particles_template.txt'), ph.join(dir, `${map}_particles.txt`)]
+  fs.copyFileSync(...pipe)
+  return pipe[1]
+}
+
+function getDemoInfo (file) {
   let buffer = fs.readFileSync(file)
-  if (buffer.slice(0, 8).toString() !== 'HL2DEMO\0') return null
-  return buffer.readIntLE(1060, 4)
+  if (buffer.toString('utf8', 0, 8) !== 'HL2DEMO\0') return null
+  return {
+    map: buffer.toString('utf8', 536, buffer.indexOf(0, 536)),
+    total: buffer.readIntLE(1060, 4)
+  }
 }
 
 // clears gamedir of demo file so we can launch it from a game with custom -game parameter
