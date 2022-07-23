@@ -163,6 +163,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
   for (let i = 0; i < arr.length; i++) {
     let a = arr[i]
 
+    if (!a.ffmpeg) a.ffmpeg = {}
     if (!a.pre) a.pre = 0
     if (!a.padding) a.padding = 0
     a.ticks[0] -= a.padding
@@ -301,6 +302,8 @@ DemRec.prototype.runFFMPEG = async function (arr, demo, files, dir, out) {
           .replaceAll('%TIME_START%', util.getTickTime(a.padding))
           .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
           .replaceAll('%OUT%', result)
+
+        for (let key in a.ffmpeg) cmd = cmd.replaceAll(`%${key}%`, a.ffmpeg[key])
 
         await ffmpeg(cmd, progress => {
           this.emit('log', { event: DemRec.Events.FFMPEG_PROCESS + Number(progress === 100), demo: file, file: files[i], progress, index: i + 2, total: parts.length + 1 })
