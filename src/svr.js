@@ -22,38 +22,44 @@ SVR.prototype.writeProfile = function (name, cfg) {
   fs.writeFileSync(ph.join(this.path, 'data', 'profiles', name + '.ini'), `${res.join('\n')}\n`)
 }
 
-SVR.prototype.writeLaunchOptions = function (app, opts) {
-  fs.writeFileSync(ph.join(this.path, 'svr_launch_params.ini'), `${app}=${opts}\n`)
-}
-
 SVR.prototype.run = async function (game, events) {
   let proc = await util.findProcess(x => x.name === ph.basename(game.exe) && x.cmd.indexOf(game.token) !== -1)
-  if (!proc) {
-    let svr = child.exec(`${this.exe} ${game.id}`, { cwd: this.path })
-    await new Promise(resolve => {
-      util.watch(this.log, log => {
-        if (log.data.match(/^Hello from the game/)) events.hello()
-        else if (log.data.match(/^Init for a .*? game/) || log.data.match(/^!!! ERROR/)) {
-          events.init()
-          log.close()
-          resolve()
+  if (proc) throw new Error('An SVR instance is already running!')
+
+  let svr = child.exec(`"${this.exe}" ${game.id} ${game.params}`.trim())
+
+  svr.on('error', e => { throw e })
+
+  await new Promise(resolve => {
+    svr.stdout.on('data', d => {
+      let parts = d.toString().trim().split(' ')
+      switch (parts[0]) {
+        case 'HELLO': {
+          events.hello()
+          break
         }
-      })
+        case 'INIT': {
+          events.init()
+          resolve()
+          break
+        }
+        case 'EXIT': {
+          events.exit(Number(parts[1]))
+          break
+        }
+      }
     })
-    svr.on('error', e => { throw e })
-  }
+  })
 
   let app = await util.findProcess(x => x.path.toLowerCase() === game.exe.toLowerCase())
-  app.send = cmd => child.spawn(game.exe, ['-hijack', ...cmd])
-  app.exit = () => {
+
+  svr.send = cmd => child.spawn(game.exe, ['-hijack', ...cmd])
+  svr.exit = () => {
     try { process.kill(app.id) } catch (e) { return false }
-    app = null
+    svr = null
   }
 
-  return new Promise(resolve => {
-    util.watch(ph.join(game.tmp, game.log), () => resolve(app), true)
-    app.send(['+echo heartbeat'])
-  })
+  return svr
 }
 
 module.exports = new SVR()

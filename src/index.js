@@ -19,9 +19,10 @@ class DemRec extends require('events') {
 
     this.cfg = util.readINI(config, ['FFMPEG'])
 
-    if (!svr.init(this.cfg.General.svr_dir)) throw new Error('Could not find valid SVR directory!')
+    if (!svr.init('./svr')) throw new Error('Could not find valid SVR directory!')
 
     this.initialized = false
+    this.params = ''
   }
 
   static Events = {
@@ -54,8 +55,7 @@ DemRec.prototype.init = async function () {
   try { await util.run('ffmpeg.exe -version') } catch (e) { throw new Error('FFmpeg not found!') }
   if (!await steam.init()) throw new Error('Steam is not running!')
 
-  this.setGame(this.cfg.General.game_app)
-  this.setLaunchOptions(this.cfg.General.game_args)
+  this.setGame(this.cfg.General.game_app, this.cfg.General.game_args)
   this.setProfile(this.cfg)
 
   this.kill()
@@ -64,17 +64,20 @@ DemRec.prototype.init = async function () {
   this.initialized = true
 }
 
-DemRec.prototype.setGame = function (app) {
+DemRec.prototype.setGame = function (app, args) {
   this.game = {
     id: app,
     ...steam.get(app),
     log: 'console.log',
     token: (this.cfg.General.game_token || 'demrec').toLowerCase()
   }
+
   if (['bin', 'hl2', 'platform', ph.basename(this.game.dir).toLowerCase()].includes(this.game.token)) {
     throw new Error('Invalid game token provided!')
   }
+
   this.game.tmp = ph.join(this.game.dir, '..', this.game.token)
+  this.game.params = `-game ${this.game.token} ${args || ''}`.trim()
 }
 
 DemRec.prototype.updateCustomFiles = function () {
@@ -103,13 +106,6 @@ DemRec.prototype.updateCustomFiles = function () {
   util.remove(TMP)
 }
 
-DemRec.prototype.setLaunchOptions = function (opts) {
-  let args = [`-game ${this.game.token}`]
-  if (opts) args.push(opts)
-
-  svr.writeLaunchOptions(this.game.id, args.join(' '))
-}
-
 DemRec.prototype.setProfile = function (cfg) {
   svr.writeProfile(this.game.token, {
     video: cfg.Video,
@@ -126,18 +122,22 @@ DemRec.prototype.launch = async function (silent = false) {
   let overlay = ph.join(steam.path, 'GameOverlayUI.exe')
   let replace = overlay + 'DISABLED'
 
-  let act = () => fs.existsSync(replace) && fs.renameSync(replace, overlay)
+  let repair = () => fs.existsSync(replace) && fs.renameSync(replace, overlay)
 
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
 
   this.app = await svr.run(this.game, {
     hello: () => {
       fs.renameSync(overlay, replace)
-      util.addListeners(process, KILLERS, act)
+      util.addListeners(process, KILLERS, repair)
     },
     init: () => {
-      act()
-      util.removeListeners(process, KILLERS, act)
+      repair()
+      util.removeListeners(process, KILLERS, repair)
+    },
+    exit: code => {
+      this.app = null
+      if (!code) this.exit()
     }
   })
 
