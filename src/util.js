@@ -4,21 +4,16 @@ let child = require('child_process')
 
 module.exports = {
   async listProcesses () {
-    switch (process.platform) {
-      case 'win32': {
-        let data = await this.run('Get-CimInstance Win32_Process | Select-Object -Property Caption,ExecutablePath,CommandLine,ProcessId,ParentProcessId | ConvertTo-Json', { shell: 'powershell.exe' })
-        return JSON.parse(data).map(x => {
-          return {
-            name: x.Caption || '',
-            path: x.ExecutablePath || '',
-            cmd: x.CommandLine || '',
-            id: Number(x.ProcessId) || null,
-            parent: Number(x.ParentProcessId) || null
-          }
-        })
+    let data = await this.run('Get-CimInstance Win32_Process | Select-Object -Property Caption,ExecutablePath,CommandLine,ProcessId,ParentProcessId | ConvertTo-Json', { shell: 'powershell.exe' })
+    return JSON.parse(data).map(x => {
+      return {
+        name: x.Caption || '',
+        path: x.ExecutablePath || '',
+        cmd: x.CommandLine || '',
+        id: Number(x.ProcessId) || null,
+        parent: Number(x.ParentProcessId) || null
       }
-      default: throw Error(`Platform '${process.platform}' not supported.`)
-    }
+    })
   },
   async findProcess (fn) {
     let procs = await this.listProcesses()

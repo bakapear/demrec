@@ -11,7 +11,10 @@ let DATA = ph.join(__dirname, 'data')
 
 class DemRec extends require('events') {
   constructor (config) {
+    if (process.platform !== 'win32') throw new Error(`Platform '${process.platform}' not supported.`)
+
     super()
+
     if (!fs.existsSync(config)) throw new Error(`Config file "${config}" not found!`)
 
     this.cfg = util.readINI(config, ['FFMPEG'])
