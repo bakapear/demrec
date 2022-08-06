@@ -10,6 +10,7 @@ SVR.prototype.init = function (dir) {
     this.path = ph.resolve(dir)
     this.exe = ph.join(this.path, 'svr_launcher.exe')
     this.movies = ph.join(this.path, 'movies')
+    this.profiles = ph.join(this.path, 'data', 'profiles')
     this.log = ph.join(this.path, 'data', 'SVR_LOG.txt')
     return true
   }
@@ -24,7 +25,7 @@ SVR.prototype.writeProfile = function (name, cfg) {
 
 SVR.prototype.run = async function (game, events) {
   let proc = await util.findProcess(x => x.name === ph.basename(game.exe) && x.cmd.indexOf(game.token) !== -1)
-  if (proc) throw new Error('An SVR instance is already running!')
+  if (proc) throw new Error(`An SVR instance is already running! [${proc.id}]`)
 
   let svr = child.exec(`"${this.exe}" ${game.id} ${game.params}`.trim())
 

@@ -23,21 +23,22 @@ module.exports = {
     file = fs.readFileSync(ph.join(file), 'utf-8').replace(/(".*?"|'.*?')|((#|;)[^\r\n]*$)/gm, (a, b, c) => c ? '' : a)
     let lines = file.split(/\r?\n/)
     let res = {}
-    let dex = 0
+    let dex = {}
     let key = null
     for (let line of lines) {
       line = line.trim()
       if (!line) continue
       if (line[0] === '[' && line.slice(-1) === ']') {
-        if (array.includes(key)) dex++
+        if (array.includes(key)) dex[key]++
         key = line.slice(1, -1)
         if (!res[key]) {
           if (array.includes(key)) res[key] = []
           else res[key] = {}
         }
       } else if (array.includes(key)) {
-        if (!res[key][dex]) res[key][dex] = []
-        res[key][dex].push(line)
+        if (!dex[key]) dex[key] = 0
+        if (!res[key][dex[key]]) res[key][dex[key]] = []
+        res[key][dex[key]].push(line)
       } else if (key) {
         let split = line.indexOf('=')
         let prop = line.substr(0, split).trim()

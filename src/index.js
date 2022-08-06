@@ -17,7 +17,7 @@ class DemRec extends require('events') {
 
     if (!fs.existsSync(config)) throw new Error(`Config file "${config}" not found!`)
 
-    this.cfg = util.readINI(config, ['FFMPEG'])
+    this.cfg = util.readINI(config, ['FFMPEG RECORD', 'FFMPEG RECORD ONLY', 'FFMPEG'])
 
     if (!svr.init('./svr')) throw new Error('Could not find valid SVR directory!')
 
@@ -56,10 +56,11 @@ DemRec.prototype.init = async function () {
   if (!await steam.init()) throw new Error('Steam is not running!')
 
   this.setGame(this.cfg.General.game_app, this.cfg.General.game_args)
-  this.setProfile(this.cfg)
+  // this.setProfile(this.cfg)
 
   this.kill()
   if (!fs.existsSync(svr.movies)) fs.mkdirSync(svr.movies)
+  if (!fs.existsSync(svr.profiles)) fs.mkdirSync(svr.profiles)
 
   this.initialized = true
 }
@@ -106,12 +107,16 @@ DemRec.prototype.updateCustomFiles = function () {
   util.remove(TMP)
 }
 
-DemRec.prototype.setProfile = function (cfg) {
-  svr.writeProfile(this.game.token, {
+DemRec.prototype.setProfile = function (cfg, index, a) {
+  let ffmpeg = (cfg['FFMPEG RECORD']?.[0] || cfg['FFMPEG RECORD ONLY']?.[0] || []).join(' ')
+  ffmpeg = (ffmpeg && a) ? addArgsToFFMPEG(ffmpeg, a) : ''
+
+  svr.writeProfile(this.game.token + (index ? `_${index}` : ''), {
     video: cfg.Video,
     motion_blur: cfg['Motion Blur'],
     velo: cfg['Velocity Overlay'],
-    audio: { enabled: 1 }
+    audio: { enabled: 1 },
+    custom: { args: ffmpeg, args_only: Number(!!cfg['FFMPEG RECORD ONLY']) }
   })
 }
 
@@ -148,19 +153,15 @@ DemRec.prototype.record = async function (demo, arr, out) {
   if (!this.initialized) await this.init()
   if (!this.app) throw new Error('Game not running!')
 
-  if (!out) throw new Error('No output directory provided!')
-  if (!fs.existsSync(out)) fs.mkdirSync(out)
+  if (!out) out = ''
+  else if (!fs.existsSync(out)) fs.mkdirSync(out)
+  out = ph.resolve(out)
 
   if (!demo) throw new Error('No demo provided!')
   if (!fs.existsSync(demo)) throw new Error('Demo path does not exist!')
 
   let info = getDemoInfo(demo)
   if (!info) throw new Error('Invalid demo provided!')
-
-  let name = ph.basename(demo)
-
-  let dem = ph.join(this.game.tmp, name)
-  fs.copyFileSync(demo, dem)
 
   if (!Array.isArray(arr)) arr = [arr]
 
@@ -189,22 +190,22 @@ DemRec.prototype.record = async function (demo, arr, out) {
     a.cmd = `exec ${cfg}`
 
     arr[i] = a
+
+    this.setProfile(this.cfg, i + 1, a)
   }
 
-  if (!this.app) throw new Error('Game is not running!')
+  let name = ph.basename(demo)
+  let file = Math.random().toString(36).slice(2) + '-' + Date.now().toString(36) + '.dem'
 
-  createVDM(dem, arr, this.game.token)
-
-  clearDemoGame(dem, dem)
+  let dem = clearDemoGame(demo, ph.join(this.game.tmp, file))
+  let vdm = createVDM(dem, arr, this.game.token)
 
   let povr = addParticleOverride(this.game.tmp, info.map)
 
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
-  this.app.send(['+mat_fullbright', '0', '+playdemo', name])
+  this.app.send(['+mat_fullbright', '0', '+playdemo', file])
 
-  let result = await new Promise((resolve, reject) => {
-    let files = [...new Set(arr.map(x => x.out))]
-
+  await new Promise((resolve, reject) => {
     util.watch(ph.join(this.game.tmp, this.game.log), async log => {
       let map = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Missing map maps\/(.*?), {2}disconnecting\r\n$/)
       if (map) {
@@ -220,19 +221,9 @@ DemRec.prototype.record = async function (demo, arr, out) {
       let end = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Ending movie after .*? seconds \(\d+ frames, .*? fps\)\r\n$/)
       if (end) {
         log.close()
-
         await util.sleep(1234)
-
         this.emit('log', { event: DemRec.Events.DEMO_DONE, demo: name })
-
-        let dir = ph.join(svr.path, 'movies')
-
-        let res = await this.runFFMPEG(arr, name, files, dir, out)
-
-        util.remove(dir)
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir)
-
-        resolve(res)
+        resolve()
         return
       }
 
@@ -243,10 +234,10 @@ DemRec.prototype.record = async function (demo, arr, out) {
         if (match.done) break
         if (!match.value) continue
 
-        let [, file, events, progress] = match.value
+        let [, index, events, progress] = match.value
         events = events.split(',').map(Number)
         for (let event of events) {
-          let o = { event, demo: name, file: files[file] }
+          let o = { event, demo: name, file: arr[index].out }
           if (progress) o.progress = Number(progress)
           this.emit('log', o)
         }
@@ -254,9 +245,13 @@ DemRec.prototype.record = async function (demo, arr, out) {
     })
   })
 
-  util.remove([dem, dem.replace('.dem', '.vdm'), povr])
+  let log = ph.join(svr.path, 'data', 'FFMPEG_LOG.txt')
 
-  return result
+  let res = await this.runFFMPEG(arr, out, name, log)
+
+  util.remove([dem, vdm, povr, log])
+
+  return res
 }
 
 DemRec.prototype.exit = async function (silent = false) {
@@ -268,7 +263,8 @@ DemRec.prototype.exit = async function (silent = false) {
 }
 
 DemRec.prototype.kill = function () {
-  let paths = [(svr && svr.path) ? ph.join(svr.path, 'movies') : null, ph.join(DATA, 'TMP')]
+  let paths = [ph.join(DATA, 'TMP')]
+  if (svr && svr.path) paths.push(svr.movies, svr.profiles)
   if (this.game) {
     paths.push(this.game.tmp)
     util.unwatch(ph.join(this.game.tmp, this.game.log))
@@ -276,48 +272,47 @@ DemRec.prototype.kill = function () {
   util.remove(paths)
 }
 
-DemRec.prototype.runFFMPEG = async function (arr, demo, files, dir, out) {
+DemRec.prototype.runFFMPEG = async function (arr, out, demo, log) {
   let res = []
+  let dir = svr.movies
+  let files = [...new Set(arr.map(x => x.out))]
   for (let i = 0; i < files.length; i++) {
     let a = arr[i]
     let file = ph.join(dir, files[i])
-    let input = ph.join(dir, 'tmp-' + files[i])
     let result = ph.join(out, files[i])
-
-    await ffmpeg(`-i "${file + '.mp4'}" -i "${file + '.wav'}" -c:v copy -c:a aac "${this.cfg.FFMPEG ? input : result}.mp4"`, progress => {
-      this.emit('log', { event: DemRec.Events.FFMPEG_PROCESS + Number(progress === 100), demo, file: files[i], progress, index: 1, total: (this.cfg.FFMPEG?.length || 0) + 1 })
-    })
-    util.remove([file + '.mp4', file + '.wav'])
 
     if (this.cfg.FFMPEG) {
       let parts = this.cfg.FFMPEG
       for (let i = 0; i < parts.length; i++) {
         let pipe = [`${file}_${i}`, `${file}_${i + 1}`]
-        if (!i) pipe[0] = input
+        if (i === 0) pipe[0] = file
         let cmd = parts[i].join(' ')
+          .replaceAll('%INPUT%', file)
           .replaceAll('%PREV%', pipe[0])
           .replaceAll('%NEXT%', pipe[1])
-          .replaceAll('%IN%', input)
           .replaceAll('%DIR%', dir)
-          .replaceAll('%TIME%', util.getTickTime(a.ticks[1] - a.ticks[0]))
-          .replaceAll('%SECS%', (a.ticks[1] - a.ticks[0]) / (200 / 3))
-          .replace(/%TIME\[(.*?)\]%/g, (_, b) => util.getTickTime(a.ticks[1] - a.ticks[0], Number(b)))
-          .replace(/%SECS\[(.*?)\]%/g, (_, b) => (a.ticks[1] - a.ticks[0]) / (200 / 3) + Number(b))
-          .replaceAll('%TIME_START%', util.getTickTime(a.padding))
-          .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
           .replaceAll('%OUT%', result)
 
-        for (let key in a.ffmpeg) cmd = cmd.replaceAll(`%${key}%`, a.ffmpeg[key])
+        cmd = addArgsToFFMPEG(cmd, a)
 
         await ffmpeg(cmd, progress => {
-          this.emit('log', { event: DemRec.Events.FFMPEG_PROCESS + Number(progress === 100), demo: file, file: files[i], progress, index: i + 2, total: parts.length + 1 })
-        })
-        util.remove(pipe[0] + '.mp4')
+          this.emit('log', { event: DemRec.Events.FFMPEG_PROCESS + Number(progress === 100), demo, file: files[i], progress, index: i + 2, total: parts.length + 1 })
+        }, log)
+
+        util.remove(pipe[0] + '.mp4', pipe[0] + '.wav')
       }
+      res.push(result + '.mp4')
+    } else {
+      fs.copyFileSync(file + '.mp4', result + '.mp4')
+      fs.copyFileSync(file + '.wav', result + '.wav')
+      res.push(result + '.mp4', result + '.wav')
     }
-    res.push(result + '.mp4')
   }
   this.emit('log', { event: DemRec.Events.FFMPEG_DONE, demo })
+
+  util.remove(dir)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir)
+
   return res
 }
 
@@ -352,7 +347,7 @@ function createVDM (demo, arr, token) {
     vdm.add(a.ticks[0], [
       mark(i, [skip ? (DemRec.Events.DEMO_SKIP_END) : null, DemRec.Events.DEMO_RECORD]),
       a.cmd,
-      `startmovie ${a.out + '.mp4'} ${token}`
+      `startmovie ${a.out + '.mp4'} ${token}_${i + 1}`
     ])
 
     // ticks
@@ -402,7 +397,22 @@ function clearDemoGame (demo, out) {
     s += SRC.length
     let t = buf.slice(s)
     let res = Buffer.concat([buf.slice(0, s), t.slice(t.indexOf(0))])
-    return fs.writeFileSync(out, res)
+    fs.writeFileSync(out, res)
+    return out
   }
   throw Error('Could not clear gamedir from demo file.')
+}
+
+function addArgsToFFMPEG (str, a) {
+  str = str
+    .replaceAll('%TIME%', util.getTickTime(a.ticks[1] - a.ticks[0]))
+    .replaceAll('%SECS%', (a.ticks[1] - a.ticks[0]) / (200 / 3))
+    .replace(/%TIME\[(.*?)\]%/g, (_, b) => util.getTickTime(a.ticks[1] - a.ticks[0], Number(b)))
+    .replace(/%SECS\[(.*?)\]%/g, (_, b) => (a.ticks[1] - a.ticks[0]) / (200 / 3) + Number(b))
+    .replaceAll('%TIME_START%', util.getTickTime(a.padding))
+    .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
+
+  for (let key in a.ffmpeg) str = str.replaceAll(`%${key}%`, a.ffmpeg[key])
+
+  return str
 }

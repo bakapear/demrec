@@ -58,3 +58,29 @@ await dr.record('Z:/demos/auto-20200724-224342-jump_haze.dem', [
 // close the game
 await dr.exit()
 ```
+
+## FFMPEG configuration
+The default configuration in `config.ini` simply merges the resulting mp4 & wav files into a single mp4.<br>
+If you remove the FFMPEG section entirely, output of dr.record will contain both files instead.
+
+You can add additional FFMPEG jobs like this:
+```ini
+[FFMPEG]
+-i "%INPUT%.mp4"
+-i "%INPUT%.wav"
+-c:v copy
+-c:a aac
+"%NEXT%.mp4"
+
+[FFMPEG]
+-i "%PREV%.mp4" # %INPUT% is no longer available at this point
+-vf "vignette=angle=0.5"
+"%OUT%.mp4"
+```
+
+It is also possible to add custom FFMPEG args during the render. This one can only exist once and input/output args are skipped:
+```ini
+[FFMPEG RECORD] # NO ERROR HANDLING FOR THIS ONE!
+-crf 20
+-vf "vignette=angle=0.5"
+```
