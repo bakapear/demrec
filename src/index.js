@@ -299,13 +299,17 @@ DemRec.prototype.runFFMPEG = async function (arr, out, demo, log) {
           this.emit('log', { event: DemRec.Events.FFMPEG_PROCESS + Number(progress === 100), demo, file: files[i], progress, index: i + 2, total: parts.length + 1 })
         }, log)
 
-        util.remove(pipe[0] + '.mp4', pipe[0] + '.wav')
+        util.remove([pipe[0] + '.mp4', pipe[0] + '.wav'])
       }
       res.push(result + '.mp4')
     } else {
-      fs.copyFileSync(file + '.mp4', result + '.mp4')
-      fs.copyFileSync(file + '.wav', result + '.wav')
-      res.push(result + '.mp4', result + '.wav')
+      let I = { mp4: file + '.mp4', wav: file + '.wav' }
+      let O = { mp4: result + '.mp4', wav: result + '.wav' }
+
+      fs.copyFileSync(I.mp4, O.mp4)
+      fs.copyFileSync(I.wav, O.wav)
+      res.push(O.mp4, O.wav)
+      util.remove([I.mp4, I.wav])
     }
   }
   this.emit('log', { event: DemRec.Events.FFMPEG_DONE, demo })
