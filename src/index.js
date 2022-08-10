@@ -143,7 +143,8 @@ DemRec.prototype.launch = async function (silent = false) {
     },
     exit: code => {
       this.app = null
-      if (!code) this.exit()
+      this.code = code
+      this.exit(true)
     }
   })
 
@@ -257,8 +258,10 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
 DemRec.prototype.exit = async function (silent = false) {
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT })
-  if (this.app) await this.app.exit()
-  await util.sleep(1234)
+  if (this.app) {
+    await this.app.exit()
+    await util.sleep(1234)
+  }
   this.kill()
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT_END })
 }
