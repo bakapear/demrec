@@ -8,6 +8,7 @@ let VDM = require('./vdm')
 
 let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
 let DATA = ph.join(__dirname, 'data')
+let SVR = ph.join(__dirname, '..', 'svr')
 
 class DemRec extends require('events') {
   constructor (config) {
@@ -19,7 +20,7 @@ class DemRec extends require('events') {
 
     this.cfg = util.readINI(config, ['FFMPEG RECORD', 'FFMPEG RECORD ONLY', 'FFMPEG'])
 
-    if (!svr.init('./svr')) throw new Error('Could not find valid SVR directory!')
+    if (!svr.init(SVR)) throw new Error('Could not find valid SVR directory!')
 
     this.initialized = false
     this.params = ''
