@@ -9,6 +9,7 @@ let VDM = require('./vdm')
 let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
 let DATA = ph.join(__dirname, 'data')
 let SVR = ph.join(__dirname, '..', 'svr')
+let TMP = ph.join(__dirname, '..', 'tmp')
 
 class DemRec extends require('events') {
   constructor (config) {
@@ -24,6 +25,7 @@ class DemRec extends require('events') {
 
     this.initialized = false
     this.params = ''
+    this.tmp = TMP
   }
 
   static Events = {
@@ -60,7 +62,7 @@ DemRec.prototype.init = async function () {
   // this.setProfile(this.cfg)
 
   this.kill()
-  if (!fs.existsSync(svr.movies)) fs.mkdirSync(svr.movies)
+  if (this.cfg.Video.output) svr.movies = ph.resolve(this.cfg.Video.output)
   if (!fs.existsSync(svr.profiles)) fs.mkdirSync(svr.profiles)
 
   this.initialized = true
@@ -84,8 +86,10 @@ DemRec.prototype.setGame = function (app, args) {
 
 DemRec.prototype.updateCustomFiles = function () {
   if (!fs.existsSync(this.game.tmp)) fs.mkdirSync(this.game.tmp)
+  if (!fs.existsSync(this.tmp)) fs.mkdirSync(this.tmp)
 
-  let TMP = ph.join(DATA, 'TMP')
+  let out = ph.join(this.tmp, 'custom')
+  if (!fs.existsSync(out)) fs.mkdirSync(out)
 
   let paths = (this.cfg.General.game_custom || '').replaceAll('%TF%', this.game.dir).split(/[,;]/).map(x => {
     if (x) {
@@ -102,10 +106,10 @@ DemRec.prototype.updateCustomFiles = function () {
       '%CFG%': (this.cfg.General.game_cfgs || '').split(/[,;]/).map(x => x ? `exec "${x.trim()}"` : '').join('\n'),
       '%CUSTOMS%': paths
     }
-  }, TMP)
+  }, out)
 
-  util.copyFolder(TMP, this.game.tmp)
-  util.remove(TMP)
+  util.copyFolder(out, this.game.tmp)
+  util.remove(out)
 }
 
 DemRec.prototype.setProfile = function (cfg, index, a) {
@@ -113,7 +117,7 @@ DemRec.prototype.setProfile = function (cfg, index, a) {
   ffmpeg = (ffmpeg && a) ? addArgsToFFMPEG(ffmpeg, a) : ''
 
   svr.writeProfile(this.game.token + (index ? `_${index}` : ''), {
-    video: cfg.Video,
+    video: { ...cfg.Video, output: svr.movies },
     motion_blur: cfg['Motion Blur'],
     velo: cfg['Velocity Overlay'],
     audio: { enabled: 1 },
@@ -249,7 +253,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   let res = await this.runFFMPEG(arr, out, name)
 
-  util.remove([dem, vdm, povr])
+  util.remove([dem, vdm, povr, this.tmp])
 
   return res
 }
