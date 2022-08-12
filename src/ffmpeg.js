@@ -23,10 +23,9 @@ module.exports = async function ffmpeg (cmd, progress, retries = 5) {
   await new Promise((resolve, reject) => {
     app.on('close', e => {
       if (e) {
-        let error = msg.split('\r\n').slice(-2, -1)[0]
-        if (error.match(/Invalid data found when processing input|Permission denied/) && retries > 0) {
+        if (msg.match(/Invalid data found when processing input|Permission denied/) && retries > 0) {
           setTimeout(() => ffmpeg(cmd, progress, --retries).then(resolve).catch(reject), 1234)
-        } else throw Error(error)
+        } else throw Error(msg.split('\r\n').slice(-2, -1)[0])
       } else {
         progress(100)
         resolve()
