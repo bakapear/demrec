@@ -401,6 +401,7 @@ function clearDemoGame (demo, out) {
   let s = buf.indexOf(SRC)
   if (s === -1) s = buf.indexOf(SRC2)
 
+  if (buf[SIZ] < 2) buf[SIZ + 1]--
   buf[SIZ] -= 2
 
   if (s !== -1) {
