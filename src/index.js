@@ -247,11 +247,9 @@ DemRec.prototype.record = async function (demo, arr, out) {
     })
   })
 
-  let log = ph.join(svr.path, 'data', 'FFMPEG_LOG.txt')
+  let res = await this.runFFMPEG(arr, out, name)
 
-  let res = await this.runFFMPEG(arr, out, name, log)
-
-  util.remove([dem, vdm, povr, log])
+  util.remove([dem, vdm, povr])
 
   return res
 }
@@ -276,7 +274,7 @@ DemRec.prototype.kill = function () {
   util.remove(paths)
 }
 
-DemRec.prototype.runFFMPEG = async function (arr, out, demo, log) {
+DemRec.prototype.runFFMPEG = async function (arr, out, demo) {
   let res = []
   let dir = svr.movies
   let files = [...new Set(arr.map(x => x.out))]
@@ -301,7 +299,7 @@ DemRec.prototype.runFFMPEG = async function (arr, out, demo, log) {
 
         await ffmpeg(cmd, progress => {
           this.emit('log', { event: DemRec.Events.FFMPEG_PROCESS + Number(progress === 100), demo, file: files[i], progress, index: i + 2, total: parts.length + 1 })
-        }, log)
+        })
 
         util.remove([pipe[0] + '.mp4', pipe[0] + '.wav'])
       }

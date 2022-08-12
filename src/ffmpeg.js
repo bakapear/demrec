@@ -1,19 +1,13 @@
-let fs = require('fs')
 let child = require('child_process')
 
-module.exports = async function ffmpeg (cmd, progress, log, retries = 5) {
+module.exports = async function ffmpeg (cmd, progress, retries = 5) {
   let app = child.spawn('ffmpeg.exe', [...splitArgs(cmd), '-hide_banner', '-y'])
 
   let total = 0
   let msg = null
 
-  let stream = log ? fs.createWriteStream(log, { flags: 'a' }) : null
-
-  if (stream) stream.write(`CMD[${cmd}]\n`)
-
   app.stderr.on('data', e => {
     msg = e.toString()
-    if (stream) stream.write(msg)
     if (!total) {
       total = time(msg.match(/Duration: (.*?),/)?.[1])
       if (total && progress) progress(0)
@@ -28,11 +22,10 @@ module.exports = async function ffmpeg (cmd, progress, log, retries = 5) {
 
   await new Promise((resolve, reject) => {
     app.on('close', e => {
-      if (stream) stream.close()
       if (e) {
         let error = msg.split('\r\n').slice(-2, -1)[0]
         if (error.match(/Invalid data found when processing input|Permission denied/) && retries > 0) {
-          setTimeout(() => ffmpeg(cmd, progress, log, --retries).then(resolve).catch(reject), 1234)
+          setTimeout(() => ffmpeg(cmd, progress, --retries).then(resolve).catch(reject), 1234)
         } else throw Error(error)
       } else {
         progress(100)
