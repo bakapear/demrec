@@ -4,10 +4,12 @@ module.exports = async function ffmpeg (cmd, progress, retries = 5) {
   let app = child.spawn('ffmpeg.exe', [...splitArgs(cmd), '-hide_banner', '-y'])
 
   let total = 0
-  let msg = null
+  let msg = ''
 
   app.stderr.on('data', e => {
-    msg = e.toString()
+    let d = e.toString().trim()
+    if (!d) return
+    msg = d
     if (!total) {
       total = time(msg.match(/Duration: (.*?),/)?.[1])
       if (total && progress) progress(0)
@@ -15,7 +17,7 @@ module.exports = async function ffmpeg (cmd, progress, retries = 5) {
       let t = time(msg.match(/time=(.*?) /)?.[1])
       if (t && progress) {
         let p = Number((t * 100 / total).toFixed(2))
-        if (p < 100) progress(p)
+        if (p < 100) progress(p > 0 ? p : 0)
       }
     }
   })
