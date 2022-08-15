@@ -209,7 +209,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
   let povr = addParticleOverride(this.game.tmp, info.map)
 
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
-  this.app.send(['+mat_fullbright', '0', '+playdemo', file])
+
+  this.app.send(`sv_cheats 1; mat_fullbright 0; playdemo "${file}"`)
 
   await new Promise((resolve, reject) => {
     util.watch(ph.join(this.game.tmp, this.game.log), async log => {

@@ -2,6 +2,7 @@ let fs = require('fs')
 let child = require('child_process')
 let ph = require('path')
 let util = require('./util')
+let Rcon = require('./lib/rcon')
 
 function SVR () {}
 
@@ -27,7 +28,9 @@ SVR.prototype.run = async function (game, events) {
   let proc = await util.findProcess(x => x.name === ph.basename(game.exe) && x.cmd.indexOf(game.token) !== -1)
   if (proc) throw new Error(`An SVR instance is already running! [${proc.id}]`)
 
-  let svr = child.exec(`"${this.exe}" ${game.id} ${game.params}`.trim())
+  let pass = Date.now().toString(36)
+
+  let svr = child.exec(`"${this.exe}" ${game.id} -multirun -usercon +rcon_password "${pass}" +net_start ${game.params}`.trim())
 
   svr.on('error', e => { throw e })
 
@@ -54,8 +57,30 @@ SVR.prototype.run = async function (game, events) {
 
   let app = await util.findProcess(x => x.path.toLowerCase() === game.exe.toLowerCase())
 
-  svr.send = cmd => child.spawn(game.exe, ['-hijack', ...cmd])
+  let server = null
+
+  await new Promise((resolve, reject) => {
+    util.watch(ph.join(game.tmp, game.log), log => {
+      let match = log.data.match(/(?:host (.*?):.*Server (.*?),|IP (.*?),.*ports (.*?) )/s)
+      if (match && !server) {
+        let [ip, port] = match.slice(1).filter(x => x)
+        server = new Rcon(ip, port, pass)
+        server.connect()
+        server.once('error', err => {
+          log.close()
+          reject(err)
+        })
+        server.once('auth', () => {
+          log.close()
+          resolve()
+        })
+      }
+    })
+  })
+
+  svr.send = cmd => server.send(cmd)
   svr.exit = () => {
+    server.disconnect()
     try { process.kill(app.id) } catch (e) { return false }
     svr = null
   }
