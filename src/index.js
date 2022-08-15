@@ -262,6 +262,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 DemRec.prototype.exit = async function (silent = false) {
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT })
   if (this.app) {
+    this.app.send('quit')
     await this.app.exit()
     await util.sleep(1234)
   }
