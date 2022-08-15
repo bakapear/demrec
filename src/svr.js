@@ -55,7 +55,8 @@ SVR.prototype.run = async function (game, events) {
     })
   })
 
-  let app = await util.findProcess(x => x.path.toLowerCase() === game.exe.toLowerCase())
+  let app = await util.findProcess(x => x.path.indexOf(pass) > 0)
+  if (!app) throw new Error('Could not find child process!')
 
   let server = null
 
