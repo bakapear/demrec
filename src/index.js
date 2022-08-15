@@ -201,7 +201,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
   }
 
   let name = ph.basename(demo)
-  let file = Math.random().toString(36).slice(2) + '-' + Date.now().toString(36) + '.dem'
+  let file = util.rndkey() + '.dem'
 
   let dem = clearDemoGame(demo, ph.join(this.game.tmp, file))
   let vdm = createVDM(dem, arr, this.game.token)

@@ -28,7 +28,7 @@ SVR.prototype.run = async function (game, events) {
   let proc = await util.findProcess(x => x.name === ph.basename(game.exe) && x.cmd.indexOf(game.token) !== -1)
   if (proc) throw new Error(`An SVR instance is already running! [${proc.id}]`)
 
-  let pass = Date.now().toString(36)
+  let pass = util.rndkey()
 
   let svr = child.exec(`"${this.exe}" ${game.id} -multirun -usercon +rcon_password "${pass}" +net_start ${game.params}`.trim())
 
