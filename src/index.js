@@ -6,7 +6,6 @@ let steam = require('./steam')
 let svr = require('./svr')
 let VDM = require('./vdm')
 
-let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
 let DATA = ph.join(__dirname, 'data')
 let SVR = ph.join(__dirname, '..', 'svr')
 let TMP = ph.join(__dirname, '..', 'tmp')
@@ -129,21 +128,15 @@ DemRec.prototype.launch = async function (silent = false) {
   if (!this.initialized) await this.init()
   this.updateCustomFiles()
 
-  let overlay = ph.join(steam.path, 'GameOverlayUI.exe')
-  let replace = overlay + 'DISABLED'
-
-  let repair = () => fs.existsSync(replace) && fs.renameSync(replace, overlay)
-
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
+
+  let file = ph.join(this.game.exe, '..', 'steam_appid.txt')
 
   this.app = await svr.run(this.game, {
     hello: () => {
-      fs.renameSync(overlay, replace)
-      util.addListeners(process, KILLERS, repair)
-    },
-    init: () => {
-      repair()
-      util.removeListeners(process, KILLERS, repair)
+      // kill steam overlay by deleting appid txt
+      // it automatically creates a new one but the game launched wont have overlay!
+      if (fs.existsSync(file)) fs.unlinkSync(file)
     },
     exit: code => {
       this.app = null

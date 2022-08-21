@@ -39,16 +39,16 @@ SVR.prototype.run = async function (game, events) {
       let parts = d.toString().trim().split(' ')
       switch (parts[0]) {
         case 'HELLO': {
-          events.hello()
+          if (events.hello) events.hello()
           break
         }
         case 'INIT': {
-          events.init()
+          if (events.init) events.init()
           resolve()
           break
         }
         case 'EXIT': {
-          events.exit(Number(parts[1]))
+          if (events.exit) events.exit(Number(parts[1]))
           break
         }
       }
