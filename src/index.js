@@ -102,7 +102,8 @@ DemRec.prototype.updateCustomFiles = function () {
     files: ['custom/cfg/start.cfg', 'gameinfo.txt'],
     vars: {
       '%LOG%': this.game.log,
-      '%CFG%': (this.cfg.General.game_cfgs || '').split(/[,;]/).map(x => x ? `exec "${x.trim()}"` : '').join('\n'),
+      '%CFGS%': (this.cfg.General.game_cfgs || '').split(/[,;]/).map(x => x ? `exec "${x.trim()}"` : '').join('\n'),
+      '%CMDS%': (this.cfg.General.game_cmds || '').split(/[,;]/).map(x => x.trim()).join('\n'),
       '%CUSTOMS%': paths
     }
   }, out)
