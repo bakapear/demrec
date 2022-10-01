@@ -200,6 +200,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
   let dem = clearDemoGame(demo, ph.join(this.game.tmp, file))
   let vdm = createVDM(dem, arr, this.game.token)
 
+  let povr = addParticleOverride(this.game.tmp, info.map)
+
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
 
   this.app.send(`exec start; stuffcmds; playdemo "${file}"`)
@@ -246,7 +248,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   let res = await this.runFFMPEG(arr, out, name)
 
-  util.remove([dem, vdm, this.tmp])
+  util.remove([dem, vdm, povr, this.tmp])
 
   return res
 }
@@ -366,6 +368,13 @@ function createVDM (demo, arr, token) {
   vdm.write()
 
   return vdm.path
+}
+
+function addParticleOverride (tmp, map) {
+  let dir = ph.join(tmp, 'custom', 'maps')
+  let pipe = [ph.join(dir, 'particles_template.txt'), ph.join(dir, `${map}_particles.txt`)]
+  fs.copyFileSync(...pipe)
+  return pipe[1]
 }
 
 function getDemoInfo (file) {
