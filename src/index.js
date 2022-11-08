@@ -208,18 +208,18 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   await new Promise((resolve, reject) => {
     util.watch(ph.join(this.game.tmp, this.game.log), async log => {
-      let map = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Missing map maps\/(.*?), {2}disconnecting\r\n$/)
+      let map = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Missing map maps\/(.*?), {2}disconnecting\r\n/)
       if (map) {
         log.close()
         reject(Error(`Map '${map[1]}' not found!`))
         return
       }
 
-      if (log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Redownloading all lightmaps\r\n$/)) {
+      if (log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Redownloading all lightmaps\r\n/)) {
         this.emit('log', { event: DemRec.Events.DEMO_LAUNCH_END, demo: name })
       }
 
-      let end = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Ending movie after .*? seconds \(\d+ frames, .*? fps\)\r\n$/)
+      let end = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Ending movie after .*? seconds \(\d+ frames, .*? fps\)\r\n/)
       if (end) {
         log.close()
         await util.sleep(1234)
