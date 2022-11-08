@@ -258,7 +258,6 @@ DemRec.prototype.exit = async function (silent = false) {
   if (this.app) {
     this.app.send('quit')
     await this.app.exit()
-    await util.sleep(1234)
   }
   this.kill()
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT_END })
@@ -272,6 +271,7 @@ DemRec.prototype.kill = function () {
     util.unwatch(ph.join(this.game.tmp, this.game.log))
   }
   util.remove(paths)
+  this.initialized = false
 }
 
 DemRec.prototype.runFFMPEG = async function (arr, out, demo) {
