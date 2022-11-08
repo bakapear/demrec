@@ -21,7 +21,7 @@
 			game+vgui			|all_source_engine_paths|hl2/hl2_misc.vpk
 			platform+vgui		|all_source_engine_paths|platform/platform_misc.vpk
 
-			mod+mod_write		tf.
+			mod+mod_write		tf
 			game+game_write		tf
 			default_write_path	|gameinfo_path|
 			gamebin			tf/bin
