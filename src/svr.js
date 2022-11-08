@@ -49,6 +49,7 @@ SVR.prototype.run = async function (game, events) {
         }
         case 'EXIT': {
           if (events.exit) events.exit(Number(parts[1]))
+          svr.emit('finish')
           break
         }
       }
@@ -80,9 +81,10 @@ SVR.prototype.run = async function (game, events) {
   })
 
   svr.send = cmd => server.send(cmd)
-  svr.exit = () => {
+  svr.exit = async () => {
     server.disconnect()
     try { process.kill(app.id) } catch (e) { return false }
+    await new Promise(resolve => svr.on('finish', resolve))
     svr = null
   }
 
