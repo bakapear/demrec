@@ -1,6 +1,6 @@
 let child = require('child_process')
 
-module.exports = async function ffmpeg (cmd, progress, retries = 5) {
+module.exports = async function ffmpeg (cmd, progress, retries = 10) {
   let app = child.spawn('ffmpeg.exe', [...splitArgs(cmd), '-hide_banner', '-y'])
 
   let total = 0
