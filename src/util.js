@@ -117,19 +117,31 @@ module.exports = {
     return this.formatTime((ticks / (200 / 3) + add) * 1000)
   },
   formatTime (ms, decimals = 3) {
-    if (!ms) return null
+    if (!ms) return '0:00' + (decimals ? '.' + '0'.repeat(decimals) : '')
+
+    let invert = false
+
+    if (ms < 0) {
+      invert = true
+      ms = Math.abs(ms)
+    }
+
     ms = ms / 1000
     let s = Math.floor(ms % 60)
     let m = Math.floor(ms / 60 % 60)
     let h = Math.floor(ms / 60 / 60)
+
     if (!h) h = null
     else if (!m) m = '00'
     if (!s) s = '00'
+
     let t = [h, m, s].filter(x => x !== null).map((x, i, a) => {
       return (i !== 0 && x < 10 && x !== '00') ? '0' + x : x
     })
-    ms = ms.toString()
-    return t.join(':') + (decimals ? ms.substr(ms.indexOf('.'), decimals + 1) : '')
+
+    if (decimals) ms = (ms % 1).toString()
+
+    return (invert ? '-' : '') + t.join(':') + (decimals ? ms.substr(ms.indexOf('.'), decimals + 1) : '')
   },
   addListeners (app, listeners, listener) {
     for (let l of listeners) app.addListener(l, listener)
