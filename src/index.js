@@ -62,6 +62,7 @@ DemRec.prototype.init = async function () {
 
   this.kill()
   if (this.cfg.Video.output) svr.movies = ph.resolve(this.cfg.Video.output)
+  if (this.cfg['Velocity Overlay']?.output) svr.velo = ph.resolve(this.cfg['Velocity Overlay'].output)
   if (!fs.existsSync(svr.profiles)) fs.mkdirSync(svr.profiles)
 
   this.initialized = true
@@ -119,7 +120,7 @@ DemRec.prototype.setProfile = function (cfg, index, a) {
   svr.writeProfile(this.game.token + (index ? `_${index}` : ''), {
     video: { ...cfg.Video, output: svr.movies },
     motion_blur: cfg['Motion Blur'],
-    velo: cfg['Velocity Overlay'],
+    velo: { ...cfg['Velocity Overlay'], output: svr.velo },
     audio: { enabled: 1 },
     custom: { args: ffmpeg, args_only: Number(!!cfg['FFMPEG RECORD ONLY']) }
   })
@@ -265,7 +266,7 @@ DemRec.prototype.exit = async function (silent = false) {
 
 DemRec.prototype.kill = function () {
   let paths = [ph.join(DATA, 'TMP')]
-  if (svr && svr.path) paths.push(svr.movies, svr.profiles)
+  if (svr && svr.path) paths.push(svr.movies, svr.velo, svr.profiles)
   if (this.game) {
     paths.push(this.game.tmp)
     util.unwatch(ph.join(this.game.tmp, this.game.log))
