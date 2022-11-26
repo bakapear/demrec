@@ -9,7 +9,7 @@ function VDM (demo) {
 }
 
 VDM.prototype.add = function (tick, cmd, token) {
-  cmd = cmd.join('; ')
+  cmd = cmd.filter(x => x).join('; ')
   if (Array.isArray(tick)) {
     let index, lastFrame
     let range = { start: tick[0], end: tick[1] }

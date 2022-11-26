@@ -344,6 +344,7 @@ function createVDM (demo, arr, token) {
         last && !same ? 'endmovie' : '',
         mark(i, [last && !same ? DemRec.Events.DEMO_RECORD_END : null, DemRec.Events.DEMO_SKIP]),
         'volume 0',
+        a.vis ? 'r_novis 1' : '',
         `demo_gototick ${a.ticks[0] - a.pre}`
       ])
       skip++
@@ -354,6 +355,7 @@ function createVDM (demo, arr, token) {
     vdm.add(a.ticks[0], [
       mark(i, [skip ? (DemRec.Events.DEMO_SKIP_END) : null, DemRec.Events.DEMO_RECORD]),
       a.cmd,
+      a.vis ? 'r_novis 0' : '',
       `startmovie ${a.out + '.mp4'} ${token}_${i + 1}`
     ])
 
