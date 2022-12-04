@@ -117,13 +117,18 @@ DemRec.prototype.setProfile = function (cfg, index, a) {
   let ffmpeg = (cfg['FFMPEG RECORD']?.[0] || cfg['FFMPEG RECORD ONLY']?.[0] || []).join(' ')
   ffmpeg = (ffmpeg && a) ? addArgsToFFMPEG(ffmpeg, a) : ''
 
-  svr.writeProfile(this.game.token + (index ? `_${index}` : ''), {
-    video: { ...cfg.Video, output: svr.movies },
+  let out = {
+    video: { ...cfg.Video },
     motion_blur: cfg['Motion Blur'],
-    velo: { ...cfg['Velocity Overlay'], output: svr.velo },
+    velo: { ...cfg['Velocity Overlay'] },
     audio: { enabled: 1 },
     custom: { args: ffmpeg, args_only: Number(!!cfg['FFMPEG RECORD ONLY']) }
-  })
+  }
+
+  if (svr.movies) out.video.output = svr.movies
+  if (svr.velo) out.velo.output = svr.velo
+
+  svr.writeProfile(this.game.token + (index ? `_${index}` : ''), out)
 }
 
 DemRec.prototype.launch = async function (silent = false) {
