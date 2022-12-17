@@ -10,6 +10,8 @@ let DATA = ph.join(__dirname, 'data')
 let SVR = ph.join(__dirname, '..', 'svr')
 let TMP = ph.join(__dirname, '..', 'tmp')
 
+let INVALID_FOLDERS = ['addons', 'bin', 'cache', 'cfg', 'custom', 'demos', 'download', 'downloadlists', 'maps', 'materials', 'materialsrc', 'media', 'particles', 'replay', 'resource', 'screenshots', 'scripts', 'sound', 'sound_workshop', 'workshop']
+
 class DemRec extends require('events') {
   constructor (config) {
     if (process.platform !== 'win32') throw new Error(`Platform '${process.platform}' not supported.`)
@@ -72,16 +74,17 @@ DemRec.prototype.setGame = function (app, args) {
   this.game = {
     id: app,
     ...steam.get(app),
-    log: 'console.log',
     token: (this.cfg.General.game_token || 'demrec').toLowerCase()
   }
 
-  if (['bin', 'hl2', 'platform', ph.basename(this.game.dir).toLowerCase()].includes(this.game.token)) {
+  if (INVALID_FOLDERS.includes(this.game.token)) {
     throw new Error('Invalid game token provided!')
   }
 
-  this.game.tmp = ph.join(this.game.dir, '..', this.game.token)
-  this.game.params = `-game ${this.game.token} ${args || ''}`.trim()
+  this.game.tmp = ph.join(this.game.dir, this.game.token)
+  this.game.params = `${args || ''}`.trim()
+
+  this.game.log = this.game.token + '.log'
 }
 
 DemRec.prototype.updateCustomFiles = function () {
@@ -102,6 +105,7 @@ DemRec.prototype.updateCustomFiles = function () {
   util.modify(ph.join(DATA, this.game.id.toString()), {
     files: ['custom/cfg/start.cfg', 'gameinfo.txt'],
     vars: {
+      '%TOKEN%': this.game.token,
       '%LOG%': this.game.log,
       '%CFGS%': (this.cfg.General.game_cfgs || '').split(/[,;]/).map(x => x ? `exec "${x.trim()}"` : '').join('\n'),
       '%CMDS%': (this.cfg.General.game_cmds || '').split(/[,;]/).map(x => x.trim()).join('\n'),
@@ -144,6 +148,16 @@ DemRec.prototype.launch = async function (silent = false) {
       // kill steam overlay by deleting appid txt
       // it automatically creates a new one but the game launched wont have overlay!
       if (fs.existsSync(file)) fs.unlinkSync(file)
+
+      // swap gameinfo with custom one to set custom searchpaths and restore original after a second has passed
+      let info = ph.join(this.game.dir, 'gameinfo.txt')
+      let real = info + '.original'
+      fs.renameSync(info, real)
+      fs.renameSync(ph.join(this.game.tmp, 'gameinfo.txt'), info)
+      setTimeout(() => {
+        fs.unlinkSync(info)
+        fs.renameSync(real, info)
+      }, 1000)
     },
     exit: code => {
       this.app = null
@@ -203,7 +217,9 @@ DemRec.prototype.record = async function (demo, arr, out) {
   let name = ph.basename(demo)
   let file = util.rndkey() + '.dem'
 
-  let dem = clearDemoGame(demo, ph.join(this.game.tmp, file))
+  let dem = ph.join(this.game.tmp, file)
+  fs.copyFileSync(demo, dem)
+
   let vdm = createVDM(dem, arr, this.game.token)
 
   let povr = addParticleOverride(this.game.tmp, info.map)
@@ -213,7 +229,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
   this.app.send(`exec start; stuffcmds; playdemo "${file}"`)
 
   await new Promise((resolve, reject) => {
-    util.watch(ph.join(this.game.tmp, this.game.log), async log => {
+    util.watch(ph.join(this.game.dir, this.game.log), async log => {
       let map = log.data.match(/^(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Missing map maps\/(.*?), {2}disconnecting\r\n/)
       if (map) {
         log.close()
@@ -395,6 +411,8 @@ function getDemoInfo (file) {
 }
 
 // clears gamedir of demo file so we can launch it from a game with custom -game parameter
+// unused because we use same game param now (due to memory issues)
+/*
 function clearDemoGame (demo, out) {
   let SIZ = 1161
   let SRC = new Uint8Array([0x8f, 0xc2, 0x75, 0x3c, 0x6c]) // STV
@@ -417,6 +435,7 @@ function clearDemoGame (demo, out) {
   }
   throw Error('Could not clear gamedir from demo file.')
 }
+*/
 
 function addArgsToFFMPEG (str, a) {
   str = str

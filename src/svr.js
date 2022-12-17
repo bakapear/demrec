@@ -62,20 +62,15 @@ SVR.prototype.run = async function (game, events) {
   let server = null
 
   await new Promise((resolve, reject) => {
-    util.watch(ph.join(game.tmp, game.log), log => {
+    util.watch(ph.join(game.dir, game.log), log => {
       let match = log.data.match(/(?:host (.*?):.*Server (.*?),|IP (.*?),.*ports (.*?) )/s)
       if (match && !server) {
+        log.close()
         let [ip, port] = match.slice(1).filter(x => x)
         server = new Rcon(ip, port, pass)
         server.connect()
-        server.once('error', err => {
-          log.close()
-          reject(err)
-        })
-        server.once('auth', () => {
-          log.close()
-          resolve()
-        })
+        server.once('error', reject)
+        server.once('auth', resolve)
       }
     })
   })

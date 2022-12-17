@@ -7,7 +7,7 @@
 			// write path set to gameinfo
 			// use own single custom folder instead and allow for extra ones defined by user
 			
-			game+mod+custom_mod	|gameinfo_path|custom
+			game+mod+custom_mod	|gameinfo_path|%TOKEN%/custom
 			%CUSTOMS%
 			
 			game_lv				tf/tf2_lv.vpk
@@ -24,6 +24,7 @@
 			mod+mod_write		tf
 			game+game_write		tf
 			default_write_path	|gameinfo_path|
+
 			gamebin			tf/bin
 
 			game				|all_source_engine_paths|hl2
