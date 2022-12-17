@@ -10,6 +10,7 @@ let DATA = ph.join(__dirname, 'data')
 let SVR = ph.join(__dirname, '..', 'svr')
 let TMP = ph.join(__dirname, '..', 'tmp')
 
+let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
 let INVALID_FOLDERS = ['addons', 'bin', 'cache', 'cfg', 'custom', 'demos', 'download', 'downloadlists', 'maps', 'materials', 'materialsrc', 'media', 'particles', 'replay', 'resource', 'screenshots', 'scripts', 'sound', 'sound_workshop', 'workshop']
 
 class DemRec extends require('events') {
@@ -141,23 +142,27 @@ DemRec.prototype.launch = async function (silent = false) {
 
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
 
-  let file = ph.join(this.game.exe, '..', 'steam_appid.txt')
+  let overlay = ph.join(this.game.exe, '..', 'steam_appid.txt')
+  let info = ph.join(this.game.dir, 'gameinfo.txt')
+  let real = info + '.original'
+
+  let repair = () => fs.existsSync(real) && fs.renameSync(real, info)
 
   this.app = await svr.run(this.game, {
     hello: () => {
       // kill steam overlay by deleting appid txt
       // it automatically creates a new one but the game launched wont have overlay!
-      if (fs.existsSync(file)) fs.unlinkSync(file)
+      if (fs.existsSync(overlay)) fs.unlinkSync(overlay)
 
-      // swap gameinfo with custom one to set custom searchpaths and restore original after a second has passed
-      let info = ph.join(this.game.dir, 'gameinfo.txt')
-      let real = info + '.original'
+      // swap gameinfo with custom one to set custom searchpaths and restore original after init
       fs.renameSync(info, real)
       fs.renameSync(ph.join(this.game.tmp, 'gameinfo.txt'), info)
-      setTimeout(() => {
-        fs.unlinkSync(info)
-        fs.renameSync(real, info)
-      }, 1000)
+      util.addListeners(process, KILLERS, repair)
+    },
+    init: () => {
+      fs.unlinkSync(info)
+      repair()
+      util.removeListeners(process, KILLERS, repair)
     },
     exit: code => {
       this.app = null
