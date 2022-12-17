@@ -226,7 +226,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
 
-  this.app.send(`exec start; stuffcmds; playdemo "${file}"`)
+  this.app.send(`exec start; stuffcmds; playdemo "${this.game.token}/${file}"`)
 
   await new Promise((resolve, reject) => {
     util.watch(ph.join(this.game.dir, this.game.log), async log => {
