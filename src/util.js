@@ -137,8 +137,7 @@ module.exports = {
 
     let t = [h, m, s].filter(x => x !== null).map((x, i) => (i !== 0 && x < 10 && x !== '00') ? '0' + x : x)
 
-    let decs = (ms % 1).toString().slice(2)
-    decs = decs + '0'.repeat(16 - decs.length)
+    let decs = (ms % 1).toString().slice(2) + '0'.repeat(16)
 
     return (invert ? '-' : '') + t.join(':') + (decimals ? '.' + decs.slice(0, decimals) : '')
   },
