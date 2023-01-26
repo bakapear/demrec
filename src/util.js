@@ -137,7 +137,10 @@ module.exports = {
 
     let t = [h, m, s].filter(x => x !== null).map((x, i) => (i !== 0 && x < 10 && x !== '00') ? '0' + x : x)
 
-    return (invert ? '-' : '') + t.join(':') + (decimals ? '.' + (ms % 1).toFixed(decimals).slice(2) : '')
+    let decs = (ms % 1).toString().slice(2)
+    decs = decs + '0'.repeat(16 - decs.length)
+
+    return (invert ? '-' : '') + t.join(':') + (decimals ? '.' + decs.slice(0, decimals) : '')
   },
   addListeners (app, listeners, listener) {
     for (let l of listeners) app.addListener(l, listener)
