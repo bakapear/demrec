@@ -1,4 +1,5 @@
 "GameInfo" {
+	game	"TF2 (%TOKEN%)"
 	FileSystem {
 		SteamAppId 440
 
