@@ -196,6 +196,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
     if (!a.ffmpeg) a.ffmpeg = {}
     if (!a.pre) a.pre = 0
     if (!a.padding) a.padding = 0
+    a.time = a.ticks[1] - a.ticks[0]
     a.ticks[0] -= a.padding
     a.ticks[1] += a.padding
     if (!a.ticks[0] || a.ticks[0] < 0) a.ticks[0] = 0
@@ -449,7 +450,7 @@ function addArgsToFFMPEG (str, a) {
     .replace(/%TIME\[(.*?)\]%/g, (_, b) => util.getTickTime(a.ticks[1] - a.ticks[0], Number(b)))
     .replace(/%SECS\[(.*?)\]%/g, (_, b) => (a.ticks[1] - a.ticks[0]) / (200 / 3) + Number(b))
     .replaceAll('%TIME_START%', util.getTickTime(a.padding))
-    .replaceAll('%TIME_END%', util.getTickTime(a.ticks[1] - a.ticks[0] - a.padding))
+    .replaceAll('%TIME_END%', util.getTickTime(a.padding + a.time))
 
   for (let key in a.ffmpeg) str = str.replaceAll(`%${key}%`, a.ffmpeg[key])
 
