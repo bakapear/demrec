@@ -372,7 +372,6 @@ function createVDM (demo, arr, token) {
         mark(i, [last && !same ? DemRec.Events.DEMO_RECORD_END : null, DemRec.Events.DEMO_SKIP]),
         'volume 0',
         a.vis ? 'r_novis 1' : '',
-        a.reload ? 'mat_reloadallmaterials' : '',
         `demo_gototick ${a.ticks[0] - a.pre}`
       ])
       skip++
@@ -391,7 +390,7 @@ function createVDM (demo, arr, token) {
     vdm.add(a.ticks, [mark(i, [DemRec.Events.DEMO_RECORD], '*')], '*')
 
     // finish
-    if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(i, [DemRec.Events.DEMO_RECORD_END]), 'stopdemo'])
+    if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(i, [DemRec.Events.DEMO_RECORD_END]), 'stopdemo', a.reload ? 'mat_reloadallmaterials' : ''])
 
     last = a.ticks[1]
   }
