@@ -138,6 +138,7 @@ DemRec.prototype.setProfile = function (cfg, index, a) {
 
 DemRec.prototype.launch = async function (silent = false) {
   if (!this.initialized) await this.init()
+  this.first = false
   this.updateCustomFiles()
 
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
@@ -232,7 +233,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   this.emit('log', { event: DemRec.Events.DEMO_LAUNCH, demo: name })
 
-  this.app.send(`exec start; stuffcmds; playdemo "${this.game.token}/${file}"`)
+  this.app.send(`exec start; stuffcmds; ${!this.first && arr[0]?.reload ? 'mat_reloadallmaterials' : ''}; playdemo "${this.game.token}/${file}"`)
+  this.first = true
 
   await new Promise((resolve, reject) => {
     util.watch(ph.join(this.game.dir, this.game.log), async log => {
@@ -390,7 +392,7 @@ function createVDM (demo, arr, token) {
     vdm.add(a.ticks, [mark(i, [DemRec.Events.DEMO_RECORD], '*')], '*')
 
     // finish
-    if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(i, [DemRec.Events.DEMO_RECORD_END]), 'stopdemo', a.reload ? 'mat_reloadallmaterials' : ''])
+    if (i === arr.length - 1) vdm.add(a.ticks[1], ['volume 0', mark(i, [DemRec.Events.DEMO_RECORD_END]), 'stopdemo'])
 
     last = a.ticks[1]
   }
