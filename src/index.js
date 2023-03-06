@@ -372,6 +372,7 @@ function createVDM (demo, arr, token) {
         mark(i, [last && !same ? DemRec.Events.DEMO_RECORD_END : null, DemRec.Events.DEMO_SKIP]),
         'volume 0',
         a.vis ? 'r_novis 1' : '',
+        a.reload ? 'mat_reloadallmaterials' : '',
         `demo_gototick ${a.ticks[0] - a.pre}`
       ])
       skip++
