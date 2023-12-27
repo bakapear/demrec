@@ -453,6 +453,8 @@ function addArgsToFFMPEG (str, a) {
     .replace(/%SECS\[(.*?)\]%/g, (_, b) => (a.ticks[1] - a.ticks[0]) / (200 / 3) + Number(b))
     .replaceAll('%TIME_START%', util.getTickTime(a.padding))
     .replaceAll('%TIME_END%', util.getTickTime(a.padding + a.time))
+    .replaceAll('%MS_START%', (a.padding / (200 / 3)) * 1000)
+    .replaceAll('%MS_END%', ((a.padding + a.time) / (200 / 3)) * 1000)
 
   for (let key in a.ffmpeg) str = str.replaceAll(`%${key}%`, a.ffmpeg[key])
 
