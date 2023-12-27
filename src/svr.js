@@ -78,7 +78,7 @@ SVR.prototype.run = async function (game, events) {
   svr.send = cmd => server.send(cmd)
   svr.exit = async () => {
     server.disconnect()
-    try { process.kill(app.id) } catch (e) { return false }
+    try { child.spawnSync('taskkill', ['/pid', app.id, '/f', '/t']) } catch (e) { return false }
     await new Promise(resolve => svr.on('finish', resolve))
     svr = null
   }
