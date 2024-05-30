@@ -7,7 +7,6 @@ let svr = require('./svr')
 let VDM = require('./vdm')
 
 let DATA = ph.join(__dirname, 'data')
-let SVR = ph.join(__dirname, '..', 'svr')
 let TMP = ph.join(__dirname, '..', 'tmp')
 
 let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
@@ -23,7 +22,7 @@ class DemRec extends require('events') {
 
     this.cfg = util.readINI(config, ['FFMPEG RECORD', 'FFMPEG RECORD ONLY', 'FFMPEG'])
 
-    if (!svr.init(SVR)) throw new Error('Could not find valid SVR directory!')
+    if (!svr.init(this.cfg.General.svr_dir)) throw new Error('Could not find valid SVR directory!')
 
     this.initialized = false
     this.params = ''
@@ -123,17 +122,29 @@ DemRec.prototype.setProfile = function (cfg, index, a) {
   ffmpeg = (ffmpeg && a) ? addArgsToFFMPEG(ffmpeg, a) : ''
 
   let out = {
-    video: { ...cfg.Video },
+    video: { dnxhr_profile: 'hq', ...cfg.Video },
     motion_blur: cfg['Motion Blur'],
-    velo: { ...cfg['Velocity Overlay'] },
-    audio: { enabled: 1 },
+    velo: {
+      font: 'Segoe UI',
+      font_size: 48,
+      color: '255 255 255 100',
+      border_color: '0 0 0 255',
+      border_size: 0,
+      font_style: 'normal',
+      font_weight: 'thin',
+      align: '-80 80',
+      anchor: 'left',
+      length: 'xy',
+      ...cfg['Velocity Overlay']
+    },
+    audio: { enabled: 1, encoder: 'aac' },
     custom: { args: ffmpeg, args_only: Number(!!cfg['FFMPEG RECORD ONLY']) }
   }
 
   if (svr.movies) out.video.output = svr.movies
   if (svr.velo) out.velo.output = svr.velo
 
-  svr.writeProfile(this.game.token + (index ? `_${index}` : ''), out)
+  svr.writeProfile('default', out)
 }
 
 DemRec.prototype.launch = async function (silent = false) {
@@ -161,6 +172,7 @@ DemRec.prototype.launch = async function (silent = false) {
       util.addListeners(process, KILLERS, repair)
     },
     init: () => {
+      if (!fs.existsSync(real)) throw Error('INIT called before HELLO event!')
       fs.unlinkSync(info)
       repair()
       util.removeListeners(process, KILLERS, repair)
@@ -188,6 +200,8 @@ DemRec.prototype.record = async function (demo, arr, out) {
 
   let info = getDemoInfo(demo)
   if (!info) throw new Error('Invalid demo provided!')
+
+  if (info.total === 0) info.total = 999999
 
   if (!Array.isArray(arr)) arr = [arr]
 
@@ -338,9 +352,14 @@ DemRec.prototype.runFFMPEG = async function (arr, out, demo) {
       let I = { mp4: file + '.mp4', wav: file + '.wav' }
       let O = { mp4: result + '.mp4', wav: result + '.wav' }
 
-      fs.copyFileSync(I.mp4, O.mp4)
-      fs.copyFileSync(I.wav, O.wav)
-      res.push(O.mp4, O.wav)
+      if (fs.existsSync(I.wav)) {
+        fs.copyFileSync(I.mp4, O.mp4)
+        fs.copyFileSync(I.wav, O.wav)
+        res.push(O.mp4, O.wav)
+      } else {
+        fs.copyFileSync(I.mp4, O.mp4)
+        res.push(O.mp4)
+      }
       util.remove([I.mp4, I.wav])
     }
   }
@@ -385,7 +404,7 @@ function createVDM (demo, arr, token) {
       mark(i, [skip ? (DemRec.Events.DEMO_SKIP_END) : null, DemRec.Events.DEMO_RECORD]),
       a.cmd,
       a.vis ? 'r_novis 0' : '',
-      `startmovie ${a.out + '.mp4'} ${token}_${i + 1}`
+      `startmovie ${a.out + '.mp4'}`
     ])
 
     // ticks

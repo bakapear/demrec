@@ -4,7 +4,7 @@ let util = require('./util')
 
 let APPS = {
   240: ['Counter-Strike Source/hl2.exe', 'cstrike'],
-  440: ['Team Fortress 2/hl2.exe', 'tf'],
+  440: ['Team Fortress 2/tf_win64.exe', 'tf', 'tf2_steam.ini'],
   730: ['Counter-Strike Global Offensive/csgo.exe', 'csgo']
 }
 
@@ -45,7 +45,7 @@ Steam.prototype.get = function (id) {
 
   for (let path of paths) {
     let dir = ph.join(path, 'steamapps', 'common', app[0])
-    if (fs.existsSync(dir)) return { exe: dir, dir: ph.join(dir, '..', app[1]) }
+    if (fs.existsSync(dir)) return { exe: dir, dir: ph.join(dir, '..', app[1]), ini: app[2] }
   }
   throw new Error('Game not found.')
 }
