@@ -19,6 +19,10 @@ module.exports = {
     let procs = await this.listProcesses()
     return procs.find(fn)
   },
+  async getRegValue (path, key) {
+    let val = await this.run(`(Get-ItemProperty ${path} -ErrorAction SilentlyContinue).${key}`, { shell: 'powershell.exe' })
+    return val.trim()
+  },
   readINI (file, array = []) {
     file = fs.readFileSync(ph.join(file), 'utf-8').replace(/(".*?"|'.*?')|((#|;)[^\r\n]*$)/gm, (a, b, c) => c ? '' : a)
     let lines = file.split(/\r?\n/)

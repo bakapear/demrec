@@ -57,7 +57,7 @@ Object.defineProperty(DemRec.Events, 'add', {
 
 DemRec.prototype.init = async function () {
   try { await util.run('ffmpeg.exe -version') } catch (e) { throw new Error('FFmpeg not found!') }
-  if (!await steam.init()) throw new Error('Steam is not running!')
+  if (!await steam.init()) throw new Error('Could not initialize Steam!')
 
   this.setGame(this.cfg.General.game_app, this.cfg.General.game_args)
   // this.setProfile(this.cfg)

@@ -8,15 +8,14 @@ let APPS = {
   730: ['Counter-Strike Global Offensive/csgo.exe', 'csgo']
 }
 
-function Steam (search) {
-  this.search = search
+function Steam () {
   this.path = null
 }
 
 Steam.prototype.init = async function () {
-  let proc = await util.findProcess(x => x.path.toLowerCase().endsWith(this.search))
-  if (proc) {
-    this.path = ph.join(proc.path, '..')
+  let path = await util.getRegValue('HKCU:/Software/Valve/Steam', 'SteamPath')
+  if (path) {
+    this.path = path
     return true
   }
   return false
@@ -50,4 +49,4 @@ Steam.prototype.get = function (id) {
   throw new Error('Game not found.')
 }
 
-module.exports = new Steam('\\steam\\steam.exe')
+module.exports = new Steam()
