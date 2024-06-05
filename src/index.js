@@ -9,8 +9,7 @@ let VDM = require('./vdm')
 let DATA = ph.join(__dirname, 'data')
 let TMP = ph.join(__dirname, '..', 'tmp')
 
-let KILLERS = ['exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException']
-let INVALID_FOLDERS = ['addons', 'bin', 'cache', 'cfg', 'custom', 'demos', 'download', 'downloadlists', 'maps', 'materials', 'materialsrc', 'media', 'particles', 'replay', 'resource', 'screenshots', 'scripts', 'sound', 'sound_workshop', 'workshop']
+let INVALID_FOLDERS = ['hl2', 'platform', 'tf', 'addons', 'bin', 'cache', 'cfg', 'custom', 'demos', 'download', 'downloadlists', 'maps', 'materials', 'materialsrc', 'media', 'particles', 'replay', 'resource', 'screenshots', 'scripts', 'sound', 'sound_workshop', 'workshop']
 
 class DemRec extends require('events') {
   constructor (config) {
@@ -60,12 +59,15 @@ DemRec.prototype.init = async function () {
   if (!await steam.init()) throw new Error('Could not initialize Steam!')
 
   this.setGame(this.cfg.General.game_app, this.cfg.General.game_args)
-  // this.setProfile(this.cfg)
 
   this.kill()
   if (this.cfg.Video.output) svr.movies = ph.resolve(this.cfg.Video.output)
   if (this.cfg['Velocity Overlay']?.output) svr.velo = ph.resolve(this.cfg['Velocity Overlay'].output)
   if (!fs.existsSync(svr.profiles)) fs.mkdirSync(svr.profiles)
+
+  this.setProfile(this.cfg, null, {})
+
+  this.updateCustomFiles()
 
   this.initialized = true
 }
@@ -77,22 +79,24 @@ DemRec.prototype.setGame = function (app, args) {
     token: (this.cfg.General.game_token || 'demrec').toLowerCase()
   }
 
-  if (INVALID_FOLDERS.includes(this.game.token)) {
-    throw new Error('Invalid game token provided!')
-  }
+  if (INVALID_FOLDERS.includes(this.game.token)) throw new Error('Invalid game token provided!')
 
-  this.game.tmp = ph.join(this.game.dir, this.game.token)
+  this.game.tmpRoot = ph.join(this.game.dir, '..', this.game.token)
+  this.game.tmpTF = ph.join(this.game.tmpRoot, 'tf')
+  this.game.tmp = ph.join(this.game.tmpTF, this.game.token)
+
   this.game.params = `${args || ''}`.trim()
 
-  this.game.log = this.game.token + '.log'
+  this.game.log = 'console.log'
+  this.game.info = 'gameinfo.txt'
 }
 
 DemRec.prototype.updateCustomFiles = function () {
-  if (!fs.existsSync(this.game.tmp)) fs.mkdirSync(this.game.tmp)
+  if (!fs.existsSync(this.game.tmp)) fs.mkdirSync(this.game.tmp, { recursive: true })
   if (!fs.existsSync(this.tmp)) fs.mkdirSync(this.tmp)
 
   let out = ph.join(this.tmp, 'custom')
-  if (!fs.existsSync(out)) fs.mkdirSync(out)
+  if (!fs.existsSync(out)) fs.mkdirSync(out, { recursive: true })
 
   let paths = (this.cfg.General.game_custom || '').replaceAll('%TF%', this.game.dir).split(/[,;]/).map(x => {
     if (x) {
@@ -103,7 +107,7 @@ DemRec.prototype.updateCustomFiles = function () {
   }).join('\n\t\t\t')
 
   util.modify(ph.join(DATA, this.game.id.toString()), {
-    files: ['custom/cfg/start.cfg', 'gameinfo.txt'],
+    files: ['custom/cfg/start.cfg', this.game.info],
     vars: {
       '%TOKEN%': this.game.token,
       '%LOG%': this.game.log,
@@ -114,6 +118,9 @@ DemRec.prototype.updateCustomFiles = function () {
   }, out)
 
   util.copyFolder(out, this.game.tmp)
+
+  fs.renameSync(ph.join(this.game.tmp, this.game.info), ph.join(this.game.tmpTF, this.game.info))
+
   util.remove(out)
 }
 
@@ -144,39 +151,25 @@ DemRec.prototype.setProfile = function (cfg, index, a) {
   if (svr.movies) out.video.output = svr.movies
   if (svr.velo) out.velo.output = svr.velo
 
-  svr.writeProfile('default', out)
+  let name = index === null ? 'default' : (this.game.token + (index ? `_${index}` : ''))
+  svr.writeProfile(name, out)
 }
 
 DemRec.prototype.launch = async function (silent = false) {
   if (!this.initialized) await this.init()
   this.first = false
-  this.updateCustomFiles()
 
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_LAUNCH })
 
   let overlay = ph.join(this.game.exe, '..', 'steam_appid.txt')
-  let info = ph.join(this.game.dir, 'gameinfo.txt')
-  let real = info + '.original'
 
-  let repair = () => fs.existsSync(real) && fs.renameSync(real, info)
+  // kill steam overlay by deleting appid txt
+  // it automatically creates a new one but the game launched wont have overlay!
+  if (fs.existsSync(overlay)) fs.unlinkSync(overlay)
 
   this.app = await svr.run(this.game, {
-    hello: () => {
-      // kill steam overlay by deleting appid txt
-      // it automatically creates a new one but the game launched wont have overlay!
-      if (fs.existsSync(overlay)) fs.unlinkSync(overlay)
-
-      // swap gameinfo with custom one to set custom searchpaths and restore original after init
-      fs.renameSync(info, real)
-      fs.renameSync(ph.join(this.game.tmp, 'gameinfo.txt'), info)
-      util.addListeners(process, KILLERS, repair)
-    },
-    init: () => {
-      if (!fs.existsSync(real)) throw Error('INIT called before HELLO event!')
-      fs.unlinkSync(info)
-      repair()
-      util.removeListeners(process, KILLERS, repair)
-    },
+    hello: () => {},
+    init: () => {},
     exit: code => {
       this.app = null
       this.code = code
@@ -190,6 +183,7 @@ DemRec.prototype.launch = async function (silent = false) {
 DemRec.prototype.record = async function (demo, arr, out) {
   if (!this.initialized) await this.init()
   if (!this.app) throw new Error('Game not running!')
+  if (!fs.existsSync(this.tmp)) fs.mkdirSync(this.tmp)
 
   if (!out) out = ''
   else if (!fs.existsSync(out)) fs.mkdirSync(out)
@@ -251,7 +245,7 @@ DemRec.prototype.record = async function (demo, arr, out) {
   this.first = true
 
   await new Promise((resolve, reject) => {
-    util.watch(ph.join(this.game.dir, this.game.log), async log => {
+    util.watch(ph.join(this.game.tmpTF, this.game.log), async log => {
       let map = log.data.match(/(?:^|\r\n)(?:\d\d\/\d\d\/\d\d\d\d - \d\d:\d\d:\d\d: )?Missing map maps\/(.*?), {2}disconnecting\r\n/)
       if (map) {
         log.close()
@@ -303,6 +297,7 @@ DemRec.prototype.exit = async function (silent = false) {
     this.app.send('quit')
     await this.app.exit()
   }
+  await new Promise(resolve => setTimeout(resolve, 1000))
   this.kill()
   if (!silent) this.emit('log', { event: DemRec.Events.GAME_EXIT_END })
 }
@@ -311,8 +306,8 @@ DemRec.prototype.kill = function () {
   let paths = [ph.join(DATA, 'TMP')]
   if (svr && svr.path) paths.push(svr.movies, svr.velo, svr.profiles)
   if (this.game) {
-    paths.push(this.game.tmp)
-    util.unwatch(ph.join(this.game.tmp, this.game.log))
+    paths.push(this.game.tmpRoot)
+    util.unwatch(ph.join(this.game.tmpTF, this.game.log))
   }
   util.remove(paths)
   this.initialized = false
@@ -404,7 +399,7 @@ function createVDM (demo, arr, token) {
       mark(i, [skip ? (DemRec.Events.DEMO_SKIP_END) : null, DemRec.Events.DEMO_RECORD]),
       a.cmd,
       a.vis ? 'r_novis 0' : '',
-      `startmovie ${a.out + '.mp4'}`
+      `startmovie ${a.out + '.mp4'} profile=${token}_${i + 1}`
     ])
 
     // ticks

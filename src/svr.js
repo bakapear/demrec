@@ -30,7 +30,7 @@ SVR.prototype.run = async function (game, events) {
 
   let pass = util.rndkey()
 
-  let svr = child.exec(`"${this.exe}" ${game.ini} -multirun -usercon +rcon_password "${pass}" +net_start ${game.params}`.trim())
+  let svr = child.exec(`"${this.exe}" ${game.ini} -game ${game.token}/tf -multirun -usercon +rcon_password "${pass}" +net_start ${game.params}`.trim())
   svr.on('error', e => { throw e })
 
   svr.stderr.on('data', d => {
@@ -58,7 +58,7 @@ SVR.prototype.run = async function (game, events) {
   let server = null
 
   await new Promise((resolve, reject) => {
-    util.watch(ph.join(game.dir, game.log), log => {
+    util.watch(ph.join(game.tmpTF, game.log), log => {
       let match = log.data.match(/(?:host (.*?):.*Server (.*?),|IP (.*?),.*ports (.*?) )/s)
       if (match && !server) {
         log.close()
